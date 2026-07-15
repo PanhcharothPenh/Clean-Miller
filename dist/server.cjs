@@ -2171,9 +2171,11 @@ app.put("/api/users/:id", (req, res) => {
   if (!user) return res.status(404).json({ error: "User not found" });
   const {
     fullName,
+    username,
     email,
     phone,
     roleId,
+    password,
     status,
     assignedBranchIds,
     customPermissionIds,
@@ -2186,6 +2188,20 @@ app.put("/api/users/:id", (req, res) => {
   if (fullName) user.fullName = fullName;
   if (email) user.email = email;
   if (phone) user.phone = phone;
+  if (username && username.toLowerCase() !== user.username.toLowerCase()) {
+    const exists = localDb.users.some(
+      (u) => u.id !== user.id && u.username.toLowerCase() === username.toLowerCase()
+    );
+    if (exists) {
+      return res.status(400).json({ error: "Username already in use" });
+    }
+    user.username = username;
+  }
+  if (password) {
+    const salt = import_bcryptjs.default.genSaltSync(10);
+    user.passwordHash = import_bcryptjs.default.hashSync(password, salt);
+    securityMsg += "Credential passcode manually reset by administrator. ";
+  }
   if (roleId && roleId !== user.roleId) {
     securityMsg += `Role modified from [${user.roleId}] to [${roleId}]. `;
     user.roleId = roleId;
