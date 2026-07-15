@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Languages, Loader2, User, Shield, Check, Info, ArrowLeft, Send, ExternalLink } from 'lucide-react';
+import { ShieldCheck, Languages, Loader2, User, Shield, Check, Info, ArrowLeft, Send, ExternalLink, Eye, EyeOff } from 'lucide-react';
 import { saveSession, authApi } from '../utils/api';
 import Clean24Logo from './Clean24Logo';
 
@@ -26,6 +26,7 @@ export default function TelegramLogin({ onLoginSuccess, lang, setLang }: Telegra
   const [usernameOrEmail, setUsernameOrEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [remember, setRemember] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
 
   // Telegram Bot Login Approval States
   const [tgApprovalUsername, setTgApprovalUsername] = useState<string>('');
@@ -511,14 +512,23 @@ export default function TelegramLogin({ onLoginSuccess, lang, setLang }: Telegra
                       {lang === 'en' ? 'Reset password' : 'កំណត់ឡើងវិញ'}
                     </button>
                   </div>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
-                    className="block w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none transition-all font-mono"
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter password"
+                      className="block w-full pl-3.5 pr-10 py-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none transition-all font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="pt-1">
