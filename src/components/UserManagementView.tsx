@@ -906,7 +906,7 @@ export default function UserManagementView({
                               </button>
 
                               {/* Delete User */}
-                              {u.role !== 'Owner' && (
+                              {u.id !== 'usr_owner' && (
                                 <button
                                   onClick={() => handleDeleteUser(u)}
                                   className="text-slate-500 hover:text-rose-600 bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 font-bold p-1.5 rounded-lg transition cursor-pointer"
@@ -916,7 +916,7 @@ export default function UserManagementView({
                                 </button>
                               )}
                               
-                              {u.role !== 'Owner' && (
+                              {u.id !== 'usr_owner' && (
                                 u.status === 'Active' ? (
                                   <button
                                     onClick={() => handleToggleStatus(u, 'Locked')}

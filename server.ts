@@ -2077,8 +2077,8 @@ app.delete('/api/users/:id', (req, res) => {
   if (index === -1) return res.status(404).json({ error: 'User not found' });
 
   const termUser = localDb.users![index];
-  if (termUser.roleId === 'owner') {
-    return res.status(400).json({ error: 'Cannot delete primary owner accounts' });
+  if (termUser.id === 'usr_owner') {
+    return res.status(400).json({ error: 'Cannot delete primary owner account' });
   }
 
   localDb.users!.splice(index, 1);
