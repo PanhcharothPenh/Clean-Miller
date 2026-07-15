@@ -92,6 +92,10 @@ async function pullCollectionsFromSupabase() {
         localDb[row.id] = row.data;
       });
       console.log('[Clean24 Server] Database successfully synchronized from Supabase!');
+    } else {
+      // Supabase is empty (first run). Trigger seedUsersAndRoles to populate and push to Supabase
+      console.log('[Clean24 Server] Supabase database is empty. Triggering self-healing database seeding...');
+      seedUsersAndRoles();
     }
   } catch (err: any) {
     console.error('[Clean24 Server] Supabase pull failed:', err.message);
