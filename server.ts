@@ -4151,7 +4151,9 @@ async function startServer() {
   });
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
 
 
 // Export Express app instance for Vercel Serverless environment
