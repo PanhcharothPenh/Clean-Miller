@@ -361,7 +361,7 @@ export default function UserManagementView({
       showBannerMessage('refuse', t.statusAuthRefuse);
       return;
     }
-    if (userObj.role === 'Owner') {
+    if (userObj.id === 'usr_owner') {
       showBannerMessage('error', t.ownerStatusRefuse);
       return;
     }
@@ -382,7 +382,7 @@ export default function UserManagementView({
       showBannerMessage('refuse', t.deleteAuthRefuse);
       return;
     }
-    if (userObj.role === 'Owner') {
+    if (userObj.id === 'usr_owner') {
       showBannerMessage('error', t.ownerDeleteRefuse);
       return;
     }
