@@ -127,9 +127,7 @@ export default function UserManagementView({
       saveCustomMatrix: "Save Custom Matrix",
       ownerPrivilegeNotice: "The system Owner possesses absolute root administrative parameters across all modules and cannot be edited.",
       selectRoleToConfigure: "Select Role to Configure",
-      sandboxNoticeTitle: "Sandbox Protection Rule:",
-      sandboxNoticeDesc: "When defining roles on the client, modifications sync securely to the background server. Custom roles are fully supportable by adding roles dynamically over the REST API.",
-      secureAuditLogins: "Secure Audit Audited Logins",
+                  secureAuditLogins: "Secure Audit Audited Logins",
       reloadLogs: "Reload Logs",
       tblIdentityEmail: "Access User ID / Email",
       tblIpAddress: "IP Address",
@@ -204,9 +202,7 @@ export default function UserManagementView({
       saveCustomMatrix: "រក្សាទុកសិទ្ធិតួនាទី",
       ownerPrivilegeNotice: "ម្ចាស់ហាងចម្បង (Owner) មានសិទ្ធិពេញលេញលើគ្រប់ផ្នែកទាំងអស់ ហើយមិនអាចកែប្រែបានឡើយ។",
       selectRoleToConfigure: "ជ្រើសរើសតួនាទីដើម្បីកំណត់សិទ្ធិ",
-      sandboxNoticeTitle: "ច្បាប់ការពារប្រព័ន្ធ៖",
-      sandboxNoticeDesc: "នៅពេលកែប្រែសិទ្ធិតួនាទីនៅលើវេបសាយ វានឹងធ្វើការរក្សាទុកដោយស្វ័យប្រវត្តទៅកាន់ម៉ាស៊ីន Cloud Server។ គណនីតួនាទីបន្ថែមអាចបង្កើតបានតាមរយៈ REST API។",
-      secureAuditLogins: "កំណត់ហេតុសុវត្ថិភាពនៃការចូលប្រព័ន្ធ",
+                  secureAuditLogins: "កំណត់ហេតុសុវត្ថិភាពនៃការចូលប្រព័ន្ធ",
       reloadLogs: "ទាញយកប្រវត្តិឡើងវិញ",
       tblIdentityEmail: "ឈ្មោះគណនី / អ៊ីមែល",
       tblIpAddress: "អាសយដ្ឋាន IP",
@@ -985,10 +981,7 @@ export default function UserManagementView({
               })}
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-[11px] leading-relaxed text-amber-800">
-              <strong className="font-bold block mb-1">💡 {t.sandboxNoticeTitle}</strong>
-              {t.sandboxNoticeDesc}
-            </div>
+
           </div>
 
           {/* Granular Permission Toggles Editor Grid */}

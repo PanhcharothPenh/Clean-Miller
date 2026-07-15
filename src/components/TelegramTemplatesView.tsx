@@ -597,7 +597,7 @@ export default function TelegramTemplatesView({ branches }: TelegramTemplatesVie
               <div>
                 <h3 className="font-bold text-indigo-950 text-xs uppercase tracking-wider border-b border-indigo-50 pb-2 mb-3 flex items-center gap-1.5">
                   <span className="w-1.5 h-3 bg-indigo-600 rounded"></span>
-                  Dynamic Test Bench Simulator
+                  Dynamic Telegram Test Bench
                 </h3>
 
                 {testTemplate ? (
@@ -606,7 +606,7 @@ export default function TelegramTemplatesView({ branches }: TelegramTemplatesVie
                     <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-1">
                       <h4 className="text-xs font-black text-indigo-900 flex items-center gap-1 uppercase">
                         <Bot size={13} className="text-indigo-600" />
-                        Interactive Sandbox Testing
+                        Interactive Template Testing
                       </h4>
                       <p className="text-[10px] text-slate-550 leading-relaxed font-semibold">
                         Replace template tokens with mock data and dispatch live messages. Testing displays delivery receipts below.
@@ -689,7 +689,7 @@ export default function TelegramTemplatesView({ branches }: TelegramTemplatesVie
                     <div>
                       <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
                         <span>Telegram Client Preview Frame</span>
-                        <span className="text-[9px] font-mono lowercase bg-slate-100 px-1 rounded block">sandbox wrapper</span>
+                        <span className="text-[9px] font-mono lowercase bg-slate-100 px-1 rounded block">test runner</span>
                       </h4>
                       <div className="bg-slate-900 text-white rounded-xl p-4.5 font-sans relative overflow-hidden shadow-inner text-left max-h-[220px] overflow-y-auto">
                         <div className="absolute top-2 right-2 flex items-center gap-1">
@@ -724,7 +724,7 @@ export default function TelegramTemplatesView({ branches }: TelegramTemplatesVie
                             <p className="text-[11px] leading-relaxed font-semibold">{testLogs.message}</p>
                             {testLogs.simulated && (
                               <div className="mt-2 text-[10px] bg-emerald-100/50 p-2 rounded text-emerald-950 leading-relaxed font-bold">
-                                ℹ️ API delivered via simulation logic since server Telegram Bot Token remains empty or in sandboxed setup. Your formats and templates logic are <b>100% correct</b>.
+                                ℹ️ Message preview generated successfully! Please configure the Telegram Bot Token in Settings to receive live messages.
                               </div>
                             )}
                           </div>
@@ -741,7 +741,7 @@ export default function TelegramTemplatesView({ branches }: TelegramTemplatesVie
                 ) : (
                   <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-8 text-center text-slate-400">
                     <Info size={20} className="mx-auto mb-2 text-indigo-200" />
-                    <p className="text-xs">Click <b>"Run Tests"</b> on any template listed on the left dynamically to initialize live preview variables parsing and sandbox delivery testing.</p>
+                    <p className="text-xs">Click <b>"Run Tests"</b> on any template listed on the left to test live preview variables parsing and delivery formatting.</p>
                   </div>
                 )}
               </div>
