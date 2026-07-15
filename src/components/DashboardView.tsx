@@ -12,9 +12,7 @@ import {
   Shield, 
   History, 
   RefreshCw,
-  ArrowRight,
-  TrendingUp as SparklineIcon
-} from 'lucide-react';
+  ArrowRight } from 'lucide-react';
 import { 
   Branch, 
   Staff, 
@@ -363,7 +361,7 @@ export default function DashboardView({
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-xs space-y-4">
           <div className="pb-3 border-b border-slate-100">
             <h3 className="text-xs font-black text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
-              <SparklineIcon size={14} className="text-blue-600" />
+              <TrendingUp size={14} className="text-blue-600" />
               QUICK ACTIONS
             </h3>
           </div>
