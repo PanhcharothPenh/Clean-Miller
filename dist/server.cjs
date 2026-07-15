@@ -492,6 +492,7 @@ app.get("/api/download-project", (req, res) => {
 var SERVER_DB_PATH = import_path2.default.join(process.cwd(), "server-db.json");
 var supabase = null;
 var pendingSupabasePushes = [];
+var lastPushedDbJson = {};
 try {
   const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/['"]/g, "").trim();
   const supabaseKey = (process.env.SUPABASE_ANON_KEY || "").replace(/['"]/g, "").trim();
@@ -514,6 +515,7 @@ async function pullCollectionsFromSupabase() {
     if (data && data.length > 0) {
       data.forEach((row) => {
         localDb[row.id] = row.data;
+        lastPushedDbJson[row.id] = JSON.stringify(row.data);
       });
       console.log("[Clean24 Server] Database successfully synchronized from Supabase!");
     } else {
@@ -817,8 +819,12 @@ function saveLocalDb() {
     import_fs2.default.writeFileSync(SERVER_DB_PATH, JSON.stringify(localDb, null, 2), "utf8");
     if (supabase) {
       Object.keys(localDb).forEach((collectionId) => {
-        const p = pushCollectionToSupabase(collectionId);
-        pendingSupabasePushes.push(p);
+        const currentJson = JSON.stringify(localDb[collectionId]);
+        if (lastPushedDbJson[collectionId] !== currentJson) {
+          const p = pushCollectionToSupabase(collectionId);
+          pendingSupabasePushes.push(p);
+          lastPushedDbJson[collectionId] = currentJson;
+        }
       });
     }
   } catch (e) {

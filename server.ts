@@ -95,6 +95,7 @@ import { createClient } from '@supabase/supabase-js';
 
 let supabase: any = null;
 let pendingSupabasePushes: Promise<any>[] = [];
+let lastPushedDbJson: Record<string, string> = {};
 try {
   const supabaseUrl = (process.env.SUPABASE_URL || '').replace(/['"]/g, '').trim();
   const supabaseKey = (process.env.SUPABASE_ANON_KEY || '').replace(/['"]/g, '').trim();
@@ -120,6 +121,7 @@ async function pullCollectionsFromSupabase() {
     if (data && data.length > 0) {
       data.forEach(row => {
         localDb[row.id] = row.data;
+        lastPushedDbJson[row.id] = JSON.stringify(row.data);
       });
       console.log('[Clean24 Server] Database successfully synchronized from Supabase!');
     } else {
@@ -436,11 +438,15 @@ if (!localDb.telegramLogs) {
 function saveLocalDb() {
   try {
     fs.writeFileSync(SERVER_DB_PATH, JSON.stringify(localDb, null, 2), 'utf8');
-    // Asynchronously push all updated collections to Supabase
+    // Asynchronously push only modified collections to Supabase
     if (supabase) {
       Object.keys(localDb).forEach(collectionId => {
-        const p = pushCollectionToSupabase(collectionId);
-        pendingSupabasePushes.push(p);
+        const currentJson = JSON.stringify(localDb[collectionId]);
+        if (lastPushedDbJson[collectionId] !== currentJson) {
+          const p = pushCollectionToSupabase(collectionId);
+          pendingSupabasePushes.push(p);
+          lastPushedDbJson[collectionId] = currentJson;
+        }
       });
     }
   } catch (e) {
