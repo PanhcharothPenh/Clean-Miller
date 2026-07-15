@@ -512,15 +512,26 @@ async function pullCollectionsFromSupabase() {
   try {
     const { data, error } = await supabase.from("clean24_collections").select("*");
     if (error) throw error;
+    const existingIds = /* @__PURE__ */ new Set();
     if (data && data.length > 0) {
       data.forEach((row) => {
         localDb[row.id] = row.data;
         lastPushedDbJson[row.id] = JSON.stringify(row.data);
+        existingIds.add(row.id);
       });
       console.log("[Clean24 Server] Database successfully synchronized from Supabase!");
     } else {
       console.log("[Clean24 Server] Supabase database is empty. Triggering self-healing database seeding...");
       seedUsersAndRoles();
+    }
+    const essentialCollections = ["users", "roles", "permissions", "rolePermissions", "branches"];
+    for (const collId of essentialCollections) {
+      const hasData = collId === "rolePermissions" ? Object.keys(localDb[collId] || {}).length > 0 : Array.isArray(localDb[collId]) && localDb[collId].length > 0;
+      if (!existingIds.has(collId) && hasData) {
+        console.log(`[Clean24 Server] Self-healing sync: pushing missing collection "${collId}" to Supabase...`);
+        await pushCollectionToSupabase(collId);
+        lastPushedDbJson[collId] = JSON.stringify(localDb[collId]);
+      }
     }
   } catch (err) {
     console.error("[Clean24 Server] Supabase pull failed:", err.message);
