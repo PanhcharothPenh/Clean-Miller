@@ -876,37 +876,37 @@ export default function UserManagementView({
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right">
-                            {u.role !== 'Owner' && (
-                              <div className="flex justify-end gap-1.5">
-                                {/* Reset Password */}
-                                <button
-                                  onClick={() => setResetUser(u)}
-                                  className="text-slate-500 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 font-bold p-1.5 rounded-lg transition cursor-pointer"
-                                  title={t.resetTooltip}
-                                >
-                                  <Key size={13.5} />
-                                </button>
+                            <div className="flex justify-end gap-1.5">
+                              {/* Reset Password */}
+                              <button
+                                onClick={() => setResetUser(u)}
+                                className="text-slate-500 hover:text-indigo-600 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 font-bold p-1.5 rounded-lg transition cursor-pointer"
+                                title={t.resetTooltip}
+                              >
+                                <Key size={13.5} />
+                              </button>
 
-                                {/* Edit User Info */}
-                                <button
-                                  onClick={() => {
-                                    setEditUser(u);
-                                    setFullName(u.fullName);
-                                    setUsername(u.username);
-                                    setEmail(u.email);
-                                    setPhone(u.phone || '');
-                                    setPassword(''); // Clear password block, only change if user enters new value
-                                    setSelectedRoleId(u.roleId);
-                                    setAssignedBranchIds(u.assignedBranchIds || []);
-                                    setShowForm(true);
-                                  }}
-                                  className="text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 font-bold p-1.5 rounded-lg transition cursor-pointer"
-                                  title={t.editTooltip}
-                                >
-                                  <Edit size={13.5} />
-                                </button>
+                              {/* Edit User Info */}
+                              <button
+                                onClick={() => {
+                                  setEditUser(u);
+                                  setFullName(u.fullName);
+                                  setUsername(u.username);
+                                  setEmail(u.email);
+                                  setPhone(u.phone || '');
+                                  setPassword(''); // Clear password block, only change if user enters new value
+                                  setSelectedRoleId(u.roleId);
+                                  setAssignedBranchIds(u.assignedBranchIds || []);
+                                  setShowForm(true);
+                                }}
+                                className="text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 font-bold p-1.5 rounded-lg transition cursor-pointer"
+                                title={t.editTooltip}
+                              >
+                                <Edit size={13.5} />
+                              </button>
 
-                                {/* Delete User */}
+                              {/* Delete User */}
+                              {u.role !== 'Owner' && (
                                 <button
                                   onClick={() => handleDeleteUser(u)}
                                   className="text-slate-500 hover:text-rose-600 bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 font-bold p-1.5 rounded-lg transition cursor-pointer"
@@ -914,8 +914,10 @@ export default function UserManagementView({
                                 >
                                   <Trash2 size={13.5} />
                                 </button>
-                                
-                                {u.status === 'Active' ? (
+                              )}
+                              
+                              {u.role !== 'Owner' && (
+                                u.status === 'Active' ? (
                                   <button
                                     onClick={() => handleToggleStatus(u, 'Locked')}
                                     className="bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-1 rounded-lg transition shrink-0 cursor-pointer"
@@ -929,9 +931,9 @@ export default function UserManagementView({
                                   >
                                     {t.unlockLabel}
                                   </button>
-                                )}
-                              </div>
-                            )}
+                                )
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))
