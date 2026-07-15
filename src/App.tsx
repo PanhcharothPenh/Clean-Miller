@@ -798,7 +798,7 @@ export default function App() {
     <div className="min-h-screen w-screen max-w-full bg-slate-50 flex overflow-hidden" id="main_saas_root">
       
       {/* 1. Left Sidebar Navigation Segment */}
-      <div className="hidden lg:block shrink-0 w-64">
+      <div className="hidden lg:block shrink-0 w-64 h-screen sticky top-0">
         <Sidebar
           currentRole={currentRole}
           setCurrentRole={handleRoleSimulationSwap}

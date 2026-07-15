@@ -331,7 +331,7 @@ export default function Sidebar({
         </div>
 
         {/* Dynamic Navigation Tabs list */}
-        <div className="flex-1 overflow-y-auto px-3.5 py-3 space-y-4 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-3.5 pt-3 pb-12 space-y-4 custom-scrollbar">
           
           {/* Favorites Collapsible Group */}
           {favorites.length > 0 && (
