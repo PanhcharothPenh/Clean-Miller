@@ -1,0 +1,6 @@
+{
+  "name": "Clean24 Laundry Management",
+  "description": "Advanced Multi-Branch Laundry Management System for Clean24 Laundry, featuring multi-role access, salary and attendance trackers, daily incomes, inventory tracking, machine states, and profit & loss analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

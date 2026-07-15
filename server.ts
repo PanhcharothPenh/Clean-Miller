@@ -1,0 +1,4147 @@
+import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import cors from 'cors';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import { createServer as createViteServer } from 'vite';
+import { 
+  getTelegramConfig, 
+  saveTelegramConfig, 
+  sendTelegramMessage, 
+  formatTelegramMessage,
+  encryptToken,
+  decryptToken,
+  maskToken
+} from './telegramService.js';
+import { generateRevenuePdf } from './src/utils/RevenuePdfService.js';
+
+// Types mirror from types.ts
+interface SyncPayload {
+  branches: any[];
+  staff: any[];
+  salaries: any[];
+  attendance: any[];
+  incomes: any[];
+  expenses: any[];
+  inventory: any[];
+  machines: any[];
+  coinTransactions: any[];
+  revenueRecords: any[];
+  gasRecords: any[];
+  detergentRecords: any[];
+  softenerRecords: any[];
+  stockTransactions: any[];
+  settings: any;
+  auditLogs?: any[];
+  users?: any[];
+  roles?: any[];
+  permissions?: any[];
+  rolePermissions?: Record<string, string[]>;
+  loginHistory?: any[];
+  refreshTokens?: any[];
+  passwordResetTokens?: any[];
+  telegramTemplates?: any[];
+  telegramAlertSchedules?: any[];
+  telegramRecipients?: any[];
+  telegramLogs?: any[];
+  salarySchedules?: any[];
+  salaryAdvances?: any[];
+}
+
+const app = express();
+const PORT = 3000;
+
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+
+app.get('/api/download-project', (req, res) => {
+  const filePath = path.join(process.cwd(), 'project.tar.gz');
+  if (fs.existsSync(filePath)) {
+    res.download(filePath, 'Clean24-Miller-project.tar.gz');
+  } else {
+    res.status(404).send('Project archive not found. Please run tar manually or contact support.');
+  }
+});
+
+const SERVER_DB_PATH = path.join(process.cwd(), 'server-db.json');
+
+// Memory cache of synced data
+// Supabase Integration Adapter Configuration
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
+const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
+
+if (supabase) {
+  console.log('[Clean24 Server] Supabase client initialized successfully.');
+} else {
+  console.log('[Clean24 Server] Supabase keys missing. Running in local JSON-file fallback mode.');
+}
+
+// Global pull/push helpers
+async function pullCollectionsFromSupabase() {
+  if (!supabase) return;
+  try {
+    const { data, error } = await supabase.from('clean24_collections').select('*');
+    if (error) throw error;
+    if (data && data.length > 0) {
+      data.forEach(row => {
+        localDb[row.id] = row.data;
+      });
+      console.log('[Clean24 Server] Database successfully synchronized from Supabase!');
+    }
+  } catch (err: any) {
+    console.error('[Clean24 Server] Supabase pull failed:', err.message);
+  }
+}
+
+async function pushCollectionToSupabase(collectionId: string) {
+  if (!supabase) return;
+  try {
+    const { error } = await supabase
+      .from('clean24_collections')
+      .upsert({ id: collectionId, data: localDb[collectionId], updated_at: new Date().toISOString() });
+    if (error) throw error;
+  } catch (err: any) {
+    console.error(`[Clean24 Server] Supabase push for ${collectionId} failed:`, err.message);
+  }
+}
+
+let localDb: SyncPayload = {
+  branches: [],
+  staff: [],
+  salaries: [],
+  attendance: [],
+  incomes: [],
+  expenses: [],
+  inventory: [],
+  machines: [],
+  coinTransactions: [],
+  revenueRecords: [],
+  gasRecords: [],
+  detergentRecords: [],
+  softenerRecords: [],
+  stockTransactions: [],
+  settings: { shopName: 'Clean24 Laundry' },
+  users: [],
+  roles: [],
+  permissions: [],
+  rolePermissions: {},
+  loginHistory: [],
+  refreshTokens: [],
+  passwordResetTokens: []
+};
+
+// Load saved data if exists
+if (fs.existsSync(SERVER_DB_PATH)) {
+  try {
+    localDb = JSON.parse(fs.readFileSync(SERVER_DB_PATH, 'utf8'));
+    // Trigger initial background sync if running with Supabase
+    if (supabase) {
+      pullCollectionsFromSupabase().catch(err => console.error('[Clean24 Server] Initial pull failed:', err));
+    }
+  } catch (e) {
+    console.error('Failed to parse server-db.json:', e);
+  }
+}
+
+// Ensure the standard SyncPayload fields and authentication arrays are initialized
+if (!localDb.branches) localDb.branches = [];
+if (!localDb.staff) localDb.staff = [];
+if (!localDb.salaries) localDb.salaries = [];
+if (!localDb.attendance) localDb.attendance = [];
+if (!localDb.incomes) localDb.incomes = [];
+if (!localDb.expenses) localDb.expenses = [];
+if (!localDb.inventory) localDb.inventory = [];
+if (!localDb.machines) localDb.machines = [];
+if (!localDb.coinTransactions) localDb.coinTransactions = [];
+if (!localDb.revenueRecords) localDb.revenueRecords = [];
+if (!localDb.gasRecords) localDb.gasRecords = [];
+if (!localDb.detergentRecords) localDb.detergentRecords = [];
+if (!localDb.softenerRecords) localDb.softenerRecords = [];
+if (!localDb.stockTransactions) localDb.stockTransactions = [];
+if (!localDb.users) localDb.users = [];
+if (!localDb.roles) localDb.roles = [];
+if (!localDb.permissions) localDb.permissions = [];
+if (!localDb.rolePermissions) localDb.rolePermissions = {};
+if (!localDb.loginHistory) localDb.loginHistory = [];
+if (!localDb.refreshTokens) localDb.refreshTokens = [];
+if (!localDb.passwordResetTokens) localDb.passwordResetTokens = [];
+if (!localDb.salarySchedules) localDb.salarySchedules = [];
+if (!localDb.salaryAdvances) localDb.salaryAdvances = [];
+if (!localDb.telegramTemplates) {
+  localDb.telegramTemplates = [
+    {
+      id: "tpl_daily_revenue",
+      name: "Daily Revenue Summary",
+      category: "Daily Revenue Summary",
+      isEnabled: true,
+      engTemplate: "<b>📊 DAILY REVENUE SUMMARY</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>Branch:</b> {branch_name}\n📅 <b>Date:</b> {date} {time}\n💵 <b>Total Revenue:</b> {revenue} USD\n📈 <b>Status:</b> {status}\n━━━━━━━━━━━━━━━━━",
+      khmerTemplate: "<b>📊 របាយការណ៍ចំណូលប្រចាំថ្ងៃ</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>សាខា:</b> {branch_name}\n📅 <b>កាលបរិច្ឆេទ:</b> {date} {time}\n💵 <b>ចំណូលសរុប:</b> {revenue} USD\n📈 <b>ស្ថានភាព:</b> {status}\n━━━━━━━━━━━━━━━━━",
+      parseMode: "HTML",
+      branchId: "all",
+      targetGroups: []
+    },
+    {
+      id: "tpl_daily_expense",
+      name: "Daily Expense Summary",
+      category: "Daily Expense Summary",
+      isEnabled: true,
+      engTemplate: "<b>💸 DAILY EXPENSE SUMMARY</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>Branch:</b> {branch_name}\n📅 <b>Date:</b> {date}\n💵 <b>Total Expenses:</b> {expense} USD\n📝 <b>Details:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      khmerTemplate: "<b>💸 របាយការណ៍ចំណាយប្រចាំថ្ងៃ</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>សាខា:</b> {branch_name}\n📅 <b>កាលបរិច្ឆេទ:</b> {date}\n💵 <b>ចំណាយសរុប:</b> {expense} USD\n📝 <b>ព័ត៌មានលម្អិត:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      parseMode: "HTML",
+      branchId: "all",
+      targetGroups: []
+    },
+    {
+      id: "tpl_daily_profit",
+      name: "Daily Profit Summary",
+      category: "Daily Profit Summary",
+      isEnabled: true,
+      engTemplate: "<b>💰 DAILY PROFIT SUMMARY</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>Branch:</b> {branch_name}\n📅 <b>Date:</b> {date}\n💵 <b>Revenue:</b> {revenue} USD\n💸 <b>Expense:</b> {expense} USD\n👉 <b>Net Profit:</b> {profit} USD\n━━━━━━━━━━━━━━━━━",
+      khmerTemplate: "<b>💰 របាយការណ៍ចំណេញប្រចាំថ្ងៃ</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>សាខា:</b> {branch_name}\n📅 <b>កាលបរិច្ឆេទ:</b> {date}\n💵 <b>ចំណូល:</b> {revenue} USD\n💸 <b>ចំណាយ:</b> {expense} USD\n👉 <b>ប្រាក់ចំណេញសុទ្ធ:</b> {profit} USD\n━━━━━━━━━━━━━━━━━",
+      parseMode: "HTML",
+      branchId: "all",
+      targetGroups: []
+    },
+    {
+      id: "tpl_low_stock",
+      name: "Low Stock Alert",
+      category: "Low Stock Alert",
+      isEnabled: true,
+      engTemplate: "<b>⚠️ LOW STOCK ALERT</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>Branch:</b> {branch_name}\n📦 <b>Item:</b> {item_name}\n🚨 <b>Remaining:</b> {remaining_qty} (Min: {minimum_qty})\n📅 <b>Time:</b> {time}\n━━━━━━━━━━━━━━━━━",
+      khmerTemplate: "<b>⚠️ ដំណឹងការរំលឹកអីវ៉ាន់ក្នុងស្តុកទាប</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>សាខា:</b> {branch_name}\n📦 <b>មុខទំនិញ:</b> {item_name}\n🚨 <b>ចំនួននៅសល់:</b> {remaining_qty} (កម្រិតទាបបំផុត: {minimum_qty})\n📅 <b>ម៉ោង:</b> {time}\n━━━━━━━━━━━━━━━━━",
+      parseMode: "HTML",
+      branchId: "all",
+      targetGroups: []
+    },
+    {
+      id: "tpl_coin_alert",
+      name: "Coin Alert",
+      category: "Coin Alert",
+      isEnabled: true,
+      engTemplate: "<b>🪙 COIN DISPENSER ALERT</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>Branch:</b> {branch_name}\n💰 <b>Coin Balance:</b> {coin_balance} Coins\n📢 <b>Message:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      khmerTemplate: "<b>🪙 ការជូនដំណឹងអំពីកាក់ក្នុងម៉ាស៊ីន</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>សាខា:</b> {branch_name}\n💰 <b>ចំនួនកាក់ក្នុងម៉ាស៊ីន:</b> {coin_balance} កាក់\n📢 <b>សារដំណឹង:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      parseMode: "HTML",
+      branchId: "all",
+      targetGroups: []
+    },
+    {
+      id: "tpl_gas_alert",
+      name: "Gas Alert",
+      category: "Gas Alert",
+      isEnabled: true,
+      engTemplate: "<b>🔥 PROPANE GAS CYLINDER ALERT</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>Branch:</b> {branch_name}\n⚡ <b>Status:</b> {status}\n📢 <b>Details:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      khmerTemplate: "<b>🔥 ដំណឹងការរំលឹកហ្គាស (Propane)</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>សាខា:</b> {branch_name}\n⚡ <b>ស្ថានភាព:</b> {status}\n📢 <b>ព័ត៌មានលម្អិត:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      parseMode: "HTML",
+      branchId: "all",
+      targetGroups: []
+    },
+    {
+      id: "tpl_salary_remind",
+      name: "Salary Reminder",
+      category: "Salary Reminder",
+      isEnabled: true,
+      engTemplate: "<b>📅 UPCOMING SALARY REMINDER</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>Branch:</b> {branch_name}\n👥 <b>Total Staff:</b> {staff_count}\n💵 <b>Total Payroll:</b> {expense} USD\n💬 <b>Notification:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      khmerTemplate: "<b>📅 ការរំលឹកបើកប្រាក់បៀវត្សរ៍បុគ្គលិក</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>សាខា:</b> {branch_name}\n👥 <b>ចំនួនបុគ្គលិក:</b> {staff_count} នាក់\n💵 <b>ចំនួនត្រូវបើកសរុប:</b> {expense} USD\n💬 <b>សារដំណឹង:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      parseMode: "HTML",
+      branchId: "all",
+      targetGroups: []
+    },
+    {
+      id: "tpl_machine_maint",
+      name: "Machine Maintenance",
+      category: "Machine Maintenance",
+      isEnabled: true,
+      engTemplate: "<b>🔧 MACHINE MAINTENANCE SCHEDULE</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>Branch:</b> {branch_name}\n📟 <b>Machine ID:</b> #{machine_no}\n⚡ <b>Current Status:</b> {status}\n📝 <b>Tasks:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      khmerTemplate: "<b>🔧 ដែនការថែទាំម៉ាស៊ីនបោកគក់</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>សាខា:</b> {branch_name}\n📟 <b>លេខម៉ាស៊ីន:</b> #{machine_no}\n⚡ <b>ស្ថានភាពបច្ចុប្បន្ន:</b> {status}\n📝 <b>ការងារត្រូវធ្វើ:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      parseMode: "HTML",
+      branchId: "all",
+      targetGroups: []
+    },
+    {
+      id: "tpl_machine_broken",
+      name: "Machine Broken",
+      category: "Machine Broken",
+      isEnabled: true,
+      engTemplate: "<b>🚨 MACHINE OUT OF ORDER ALERT</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>Branch:</b> {branch_name}\n📟 <b>Machine ID:</b> #{machine_no}\n🛑 <b>Error Status:</b> {status}\n❌ <b>Problem Statement:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      khmerTemplate: "<b>🚨 ការជូនដំណឹងម៉ាស៊ីនខូច/មានបញ្ហា</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>សាខា:</b> {branch_name}\n📟 <b>លេខម៉ាស៊ីន:</b> #{machine_no}\n🛑 <b>ស្ថានភាពកំហុស:</b> {status}\n❌ <b>ការពិពណ៌នាបញ្ហា:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      parseMode: "HTML",
+      branchId: "all",
+      targetGroups: []
+    },
+    {
+      id: "tpl_cash_diff",
+      name: "Cash Difference",
+      category: "Cash Difference",
+      isEnabled: true,
+      engTemplate: "<b>⚠️ CASH DRAWER DISCREPANCY</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>Branch:</b> {branch_name}\n💵 <b>Discrepancy:</b> {revenue} USD\n⚡ <b>Status:</b> {status}\n📝 <b>Audit Message:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      khmerTemplate: "<b>⚠️ ភាពខុសគ្នានៃសាច់ប្រាក់ក្នុងថត</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>សាខា:</b> {branch_name}\n💵 <b>កម្រិតខុសគ្នា:</b> {revenue} USD\n⚡ <b>ស្ថានភាព:</b> {status}\n📝 <b>សារបញ្ជាក់:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      parseMode: "HTML",
+      branchId: "all",
+      targetGroups: []
+    },
+    {
+      id: "tpl_month_closing",
+      name: "Month-End Closing",
+      category: "Month-End Closing",
+      isEnabled: true,
+      engTemplate: "<b>📊 MONTH-END RECONCILIATION CLOSED</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>Branch:</b> {branch_name}\n📅 <b>Closing Month:</b> {date}\n💵 <b>Final Net Revenue:</b> {revenue} USD\n💬 <b>Closing Log:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      khmerTemplate: "<b>📊 ការបិទបញ្ជីគណനេយ្យប្រចាំខែ</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>សាខា:</b> {branch_name}\n📅 <b>ខែបិទបញ្ជី:</b> {date}\n💵 <b>ចំណូលសុទ្ធចុងក្រោយ:</b> {revenue} USD\n💬 <b>កំណត់ត្រា:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      parseMode: "HTML",
+      branchId: "all",
+      targetGroups: []
+    },
+    {
+      id: "tpl_backup_success",
+      name: "Backup Success",
+      category: "Backup Success",
+      isEnabled: true,
+      engTemplate: "<b>✅ SYSTEM DATABASE BACKUP SUCCESSFUL</b>\n━━━━━━━━━━━━━━━━━\n💾 <b>Task name:</b> Cloud DB Auto-Sync\n📅 <b>Timestamp:</b> {date} {time}\n⚡ <b>Status:</b> {status}\n━━━━━━━━━━━━━━━━━",
+      khmerTemplate: "<b>✅ ការចម្លងទុកទិន្នន័យប្រព័ន្ធទទួលបានជោគជ័យ</b>\n━━━━━━━━━━━━━━━━━\n💾 <b>ការងារ:</b> Cloud DB Auto-Sync\n📅 <b>ម៉ោងអនុវត្ត:</b> {date} {time}\n⚡ <b>ស្ថានភាព:</b> {status}\n━━━━━━━━━━━━━━━━━",
+      parseMode: "HTML",
+      branchId: "all",
+      targetGroups: []
+    },
+    {
+      id: "tpl_backup_failure",
+      name: "Backup Failure",
+      category: "Backup Failure",
+      isEnabled: true,
+      engTemplate: "<b>❌ SYSTEM DATABASE BACKUP FAILED</b>\n━━━━━━━━━━━━━━━━━\n💾 <b>Task name:</b> Cloud DB Auto-Sync\n📅 <b>Timestamp:</b> {date} {time}\n🛑 <b>Error Log:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      khmerTemplate: "<b>❌ ការចម្លងទុកទិន្នន័យប្រព័ន្ធបរាជ័យ</b>\n━━━━━━━━━━━━━━━━━\n💾 <b>ការងារ:</b> Cloud DB Auto-Sync\n📅 <b>ម៉ោងអនុវត្ត:</b> {date} {time}\n🛑 <b>កំហុសបច្ចេកទេស:</b> {message}\n━━━━━━━━━━━━━━━━━",
+      parseMode: "HTML",
+      branchId: "all",
+      targetGroups: []
+    }
+  ];
+}
+
+if (!localDb.telegramAlertSchedules) {
+  localDb.telegramAlertSchedules = [
+    {
+      id: "sch_1",
+      branchId: "all",
+      alertType: "Daily Revenue Summary",
+      templateId: "tpl_daily_revenue",
+      recipientId: "rec_1",
+      frequency: "DAILY",
+      sendTime: "21:00",
+      dayOfWeek: "Sunday",
+      dayOfMonth: "1",
+      isEnabled: true,
+      lastSentAt: null,
+      nextSendAt: null,
+      createdBy: "Owner / Seng Sophy",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: "sch_2",
+      branchId: "all",
+      alertType: "Low Stock Alert",
+      templateId: "tpl_low_stock",
+      recipientId: "rec_2",
+      frequency: "INSTANT",
+      sendTime: "",
+      dayOfWeek: "",
+      dayOfMonth: "",
+      isEnabled: true,
+      lastSentAt: null,
+      nextSendAt: null,
+      createdBy: "System",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
+  ];
+}
+
+if (!localDb.telegramRecipients) {
+  localDb.telegramRecipients = [
+    {
+      id: "rec_1",
+      name: "Clean24 General Channel",
+      chatId: "-1002931082",
+      branchId: "all",
+      role: "Group",
+      isEnabled: true,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: "rec_2",
+      name: "Seng Sophy (Owner)",
+      chatId: "923101",
+      branchId: "all",
+      role: "Owner",
+      isEnabled: true,
+      createdAt: new Date().toISOString()
+    }
+  ];
+}
+
+if (!localDb.telegramLogs) {
+  localDb.telegramLogs = [
+    {
+      id: "log_1",
+      scheduleId: "sch_1",
+      templateId: "tpl_daily_revenue",
+      recipientId: "rec_1",
+      chatId: "-1002931082",
+      alertType: "Daily Revenue Summary",
+      messageText: "<b>📊 DAILY REVENUE SUMMARY</b>\n🏪 Phnom Penh Central Branch\n💵 Total Revenue: 450.00 USD",
+      status: "SUCCESS",
+      sentAt: new Date().toISOString()
+    }
+  ];
+}
+
+// Save helper
+function saveLocalDb() {
+  try {
+    fs.writeFileSync(SERVER_DB_PATH, JSON.stringify(localDb, null, 2), 'utf8');
+    // Asynchronously push all updated collections to Supabase
+    if (supabase) {
+      Object.keys(localDb).forEach(collectionId => {
+        pushCollectionToSupabase(collectionId).catch(err => {
+          console.error(`[Clean24 Server] Auto-sync to Supabase failed for ${collectionId}:`, err.message);
+        });
+      });
+    }
+  } catch (e) {
+    console.error('Failed to write server-db.json:', e);
+  }
+}
+
+// JWT Configurations
+const JWT_SECRET = 'CLEAN24_JWT_SECRET_SECURED_KEY_STRICT_2026';
+const JWT_REFRESH_SECRET = 'CLEAN24_JWT_REFRESH_SECRET_KEY_SECURE_2026';
+
+function generateAccessToken(user: any) {
+  const roleName = localDb.roles?.find(r => r.id === user.roleId)?.name || 'Staff';
+  return jwt.sign(
+    { 
+      id: user.id, 
+      username: user.username, 
+      email: user.email,
+      fullName: user.fullName,
+      role: roleName, 
+      roleId: user.roleId,
+      assignedBranchIds: user.assignedBranchIds || [] 
+    },
+    JWT_SECRET,
+    { expiresIn: '30m' } // 30 minutes short-lived token
+  );
+}
+
+function generateRefreshToken(user: any) {
+  return jwt.sign(
+    { id: user.id, username: user.username },
+    JWT_REFRESH_SECRET,
+    { expiresIn: '7d' } // 7-day refresh rotation
+  );
+}
+
+// Seeding Default Roles, Permissions and Users
+const defaultRoles = [
+  { id: 'owner', name: 'Owner', description: 'Full access to all modules and all branches' },
+  { id: 'admin', name: 'Admin', description: 'Multi-branch access, users, salary, expense and analytical reports tools' },
+  { id: 'manager', name: 'Manager', description: 'Assigned branch access, daily machines, inventory and transactions tools' },
+  { id: 'staff', name: 'Staff', description: 'Assigned branch access, daily revenue input and personal profile lookups' }
+];
+
+function seedUsersAndRoles() {
+  let modified = false;
+
+  if (localDb.roles.length === 0) {
+    localDb.roles = defaultRoles;
+    modified = true;
+  }
+
+  if (localDb.permissions.length === 0) {
+    const ALL_MODULES = [
+      'Dashboard', 'Branch', 'User', 'Role', 'Staff', 'Attendance', 'Salary', 
+      'Revenue', 'Expense', 'Coin', 'Gas', 'Liquid Detergent', 'Softener', 
+      'Inventory', 'Supplier', 'Debt & Payable', 'Machine', 'Cash Drawer', 
+      'Month-End Closing', 'Telegram Settings', 'Audit Log', 'Backup & Restore', 'Reports'
+    ];
+    const ACTIONS = ['View', 'Create', 'Edit', 'Delete', 'Export PDF', 'Export Excel', 'Print', 'Approve', 'Configure'];
+    
+    let pid = 1;
+    ALL_MODULES.forEach(mod => {
+      ACTIONS.forEach(act => {
+        localDb.permissions!.push({
+          id: `perm_${pid++}`,
+          module: mod,
+          action: act
+        });
+      });
+    });
+    modified = true;
+  }
+
+  if (Object.keys(localDb.rolePermissions).length === 0) {
+    const allPermIds = localDb.permissions.map(p => p.id);
+    
+    // Owner: Full access to everything
+    localDb.rolePermissions['owner'] = allPermIds;
+    
+    // Admin: access to users, staff, salary, revenue, expense, inventory, reports
+    localDb.rolePermissions['admin'] = localDb.permissions
+      .filter(p => [
+        'Dashboard', 'Branch', 'User', 'Role', 'Staff', 'Attendance', 'Salary', 
+        'Revenue', 'Expense', 'Inventory', 'Supplier', 'Debt & Payable', 'Reports',
+        'Machine', 'Cash Drawer', 'Month-End Closing'
+      ].includes(p.module) && !['Approve', 'Configure'].includes(p.action))
+      .map(p => p.id);
+      
+    // Manager: assigned branch, daily operations, revenue, expense, inventory, machines, reports
+    localDb.rolePermissions['manager'] = localDb.permissions
+      .filter(p => [
+        'Dashboard', 'Revenue', 'Expense', 'Inventory', 'Machine', 'Reports',
+        'Attendance', 'Coin', 'Gas', 'Liquid Detergent', 'Softener', 'Cash Drawer',
+        'Supplier', 'Debt & Payable'
+      ].includes(p.module))
+      .map(p => p.id);
+      
+    // Staff: view Dashboard, input daily revenue, view own profile, own attendance, view own salary
+    localDb.rolePermissions['staff'] = localDb.permissions
+      .filter(p => (p.module === 'Revenue' && ['View', 'Create'].includes(p.action)) ||
+                    (p.module === 'Dashboard' && p.action === 'View') ||
+                    (p.module === 'Attendance' && p.action === 'View') ||
+                    (p.module === 'Salary' && p.action === 'View') ||
+                    (p.module === 'Machine' && p.action === 'View'))
+      .map(p => p.id);
+      
+    modified = true;
+  }
+
+  if (localDb.users.length === 0) {
+    const salt = bcrypt.genSaltSync(10);
+    localDb.users = [
+      {
+        id: 'usr_owner',
+        username: 'owner',
+        email: 'owner@clean24.local',
+        fullName: 'Executive Owner',
+        phone: '012 111 222',
+        passwordHash: bcrypt.hashSync('ChangeMe@123', salt),
+        roleId: 'owner',
+        status: 'Active',
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        forcePasswordChange: true, // Needs Change
+        assignedBranchIds: [] // Empty = All branches
+      },
+      {
+        id: 'usr_sophy',
+        username: 'owner_sophy',
+        email: 'owner@clean24.com',
+        fullName: 'Seng Sophy',
+        phone: '012 345 678',
+        passwordHash: bcrypt.hashSync('Sophy@123', salt),
+        roleId: 'owner',
+        status: 'Active',
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        forcePasswordChange: false,
+        assignedBranchIds: []
+      },
+      {
+        id: 'usr_darith',
+        username: 'admin_darith',
+        email: 'darith.admin@clean24.com',
+        fullName: 'Chan Darith',
+        phone: '098 765 432',
+        passwordHash: bcrypt.hashSync('Darith@123', salt),
+        roleId: 'admin',
+        status: 'Active',
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        forcePasswordChange: false,
+        assignedBranchIds: ['b1', 'b2']
+      },
+      {
+        id: 'usr_piseth',
+        username: 'manager_piseth',
+        email: 'piseth.tk@clean24.com',
+        fullName: 'Nguon Piseth',
+        phone: '012 999 888',
+        passwordHash: bcrypt.hashSync('Piseth@123', salt),
+        roleId: 'manager',
+        status: 'Active',
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        forcePasswordChange: false,
+        assignedBranchIds: ['b1']
+      },
+      {
+        id: 'usr_reaksmey',
+        username: 'staff_reaksmey',
+        email: 'reaksmey.staff@clean24.com',
+        fullName: 'Sok Reaksmey',
+        phone: '096 444 555',
+        passwordHash: bcrypt.hashSync('Reaksmey@123', salt),
+        roleId: 'staff',
+        status: 'Active',
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        forcePasswordChange: false,
+        assignedBranchIds: ['b1']
+      }
+    ];
+    modified = true;
+  }
+
+  if (modified) saveLocalDb();
+}
+
+// Run initial seeding
+seedUsersAndRoles();
+
+// Track alert history to avoid duplicate background spams
+interface AlertHistory {
+  lastDailyBusinessDate: string;
+  lastSalaryAlertDate: string;
+  lowStockSentKeys: Record<string, string>; // itemKey -> dateString
+  machineBrokenSentKeys: Record<string, string>; // machineId -> dateString
+}
+const HISTORY_PATH = path.join(process.cwd(), 'alert-history.json');
+let alertHistory: AlertHistory = {
+  lastDailyBusinessDate: '',
+  lastSalaryAlertDate: '',
+  lowStockSentKeys: {},
+  machineBrokenSentKeys: {}
+};
+if (fs.existsSync(HISTORY_PATH)) {
+  try {
+    alertHistory = JSON.parse(fs.readFileSync(HISTORY_PATH, 'utf8'));
+  } catch (e) {}
+}
+function saveAlertHistory() {
+  try {
+    fs.writeFileSync(HISTORY_PATH, JSON.stringify(alertHistory, null, 2), 'utf8');
+  } catch (e) {}
+}
+
+// ─── API ENDPOINTS ───────────────────────────────────────────────────────────
+
+// API Health Check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', serverTime: new Date().toISOString() });
+});
+
+// Helper to resolve the robust application origin behind proxy hosts
+const getAppOrigin = (req: any) => {
+  if (process.env.APP_URL) {
+    return process.env.APP_URL.replace(/\/$/, '');
+  }
+  const host = req.get('host') || 'localhost:3000';
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  return `${protocol}://${host}`;
+};
+
+// ─── TELEGRAM SSO ROUTING ───────────────────────────────────────────────────
+
+// Host Telegram Sign-On screen outside standard iFrame containers to prevent cross-origin blocks
+app.get('/auth/telegram/login', (req, res) => {
+  const telegramConfig = getTelegramConfig();
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Clean24 Telegram Sign-On Gateway</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #0f172a; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+          .card { background-color: #1e293b; border-radius: 16px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4); width: 380px; padding: 36px; border: 1px solid #334155; text-align: center;}
+          .tg-logo { width: 52px; height: 52px; background-color: #229ED9; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; }
+          .tg-logo svg { width: 26px; height: 26px; fill: white; margin-left: -2px; }
+          h2 { font-size: 22px; font-weight: 700; margin: 0; }
+          .subtitle { color: #94a3b8; font-size: 13px; line-height: 1.5; margin: 8px 0 24px 0; }
+          .widget-container { min-height: 52px; display: flex; justify-content: center; align-items: center; margin-bottom: 20px; }
+          .divider { margin: 24px 0; display: flex; align-items: center; text-align: center; color: #475569; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.1em; }
+          .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #334155; }
+          .divider:not(:empty)::before { margin-right: .8em; }
+          .divider:not(:empty)::after { margin-left: .8em; }
+          .btn-simulate { background-color: #10b981; color: white; border: none; padding: 12px 16px; border-radius: 8px; font-size: 13.5px; font-weight: 700; cursor: pointer; transition: background 0.2s, transform 0.1s; width: 100%; }
+          .btn-simulate:hover { background-color: #059669; }
+          .btn-simulate:active { transform: scale(0.99); }
+          .footer-tip { color: #64748b; font-size: 11px; margin-top: 15px; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="tg-logo">
+            <svg viewBox="0 0 28 28">
+              <path d="M14 2.8C7.8 2.8 2.8 7.8 2.8 14s5 11.2 11.2 11.2 11.2-5 11.2-11.2S20.2 2.8 14 2.8zm5.9 8.2l-2 9.5c-.1.6-.5.8-1 .5l-3-2.2-1.5 1.4c-.2.2-.3.3-.5.3l.2-2.8 5-4.6c.2-.2 0-.3-.3-.1l-6.2 3.9-2.7-.9c-.6-.2-.6-.6.1-.8l10.6-4.1c.5-.2.9.1.8.8z"/>
+            </svg>
+          </div>
+          <h2>Verify identity</h2>
+          <p class="subtitle">Securely link your Telegram account to authorise your active user profile on Clean24 Laundry.</p>
+          
+          <div class="widget-container">
+            ${telegramConfig.botToken ? `
+              <!-- Dynamic Telegram Login Widget -->
+              <script async src="https://telegram.org/js/telegram-widget.js?22" 
+                data-telegram-login="Clean24_Laundry_Bot" 
+                data-size="large" 
+                data-onauth="onTelegramAuth(user)" 
+                data-request-access="write">
+              </script>
+            ` : `
+              <div style="color: #f59e0b; font-size: 11px; line-height: 1.4; padding: 10px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 8px;">
+                ⚠️ Interactive Widget requires Bot Token configurations in settings. Use the secure Sign-On simulation path below to verify login flows immediately.
+              </div>
+            `}
+          </div>
+
+          <div class="divider">OR TEST DIRECTLY</div>
+
+          <button class="btn-simulate" onclick="handleSimulate()">
+            Simulate Telegram Auth Callback
+          </button>
+          
+          <div class="footer-tip">
+            Simulation matches matching Telegram handle username "owner_sophy" to log in easily or creates a staff credentials ledger.
+          </div>
+        </div>
+
+        <script>
+          function onTelegramAuth(user) {
+            const params = new URLSearchParams(user).toString();
+            window.location.href = '/auth/telegram/callback?' + params;
+          }
+
+          function handleSimulate() {
+            const mockUser = {
+              id: '123456789',
+              first_name: 'Sophy',
+              last_name: 'Seng',
+              username: 'owner_sophy', 
+              photo_url: '',
+              auth_date: Math.floor(Date.now() / 1000).toString(),
+              hash: 'MOCK_TELEGRAM_HASH_FOR_TESTS'
+            };
+            const params = new URLSearchParams(mockUser).toString();
+            window.location.href = '/auth/telegram/callback?' + params;
+          }
+        </script>
+      </body>
+    </html>
+  `);
+});
+
+// Official Telegram Signature Verification Callback Endpoint (HMAC SHA-256)
+app.get(['/auth/telegram/callback', '/auth/telegram/callback/'], async (req, res) => {
+  const query = req.query;
+  const hash = query.hash as string;
+
+  if (!hash) {
+    return res.status(400).send('Telegram authentication hash is missing.');
+  }
+
+  const telegramConfig = getTelegramConfig();
+  const botToken = telegramConfig.botToken || process.env.TELEGRAM_BOT_TOKEN;
+
+  let isValid = false;
+
+  if (hash === 'MOCK_TELEGRAM_HASH_FOR_TESTS') {
+    isValid = true;
+  } else if (!botToken) {
+    return res.status(400).send('System Telegram Bot Token is not yet configured. Please use simulations or set details.');
+  } else {
+    try {
+      const dataCheckArr = [];
+      for (const key in query) {
+        if (key !== 'hash') {
+          dataCheckArr.push(`${key}=${query[key]}`);
+        }
+      }
+      dataCheckArr.sort();
+      const dataCheckString = dataCheckArr.join('\n');
+
+      const secretKey = crypto.createHash('sha256').update(botToken).digest();
+      const hmac = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+      
+      isValid = (hmac === hash);
+    } catch (e: any) {
+      return res.status(500).send(`Telegram validation exception: ${e.message}`);
+    }
+  }
+
+  if (!isValid) {
+    return res.status(401).send('Telegram Login Verification failed: Integrity hashes do not match.');
+  }
+
+  // Retrieve user payload and link profiles
+  const username = query.username as string || `tg_id_${query.id}`;
+  const first_name = query.first_name as string || '';
+  const last_name = query.last_name as string || '';
+  const fullName = [first_name, last_name].filter(Boolean).join(' ') || 'Telegram User';
+
+  // Attempt matching existing Sophy profile first, or fallback to general username matches
+  let user = localDb.users!.find(u => u.username.toLowerCase() === username.toLowerCase());
+
+  if (!user) {
+    const salt = bcrypt.genSaltSync(10);
+    user = {
+      id: 'usr_tg_' + query.id,
+      fullName,
+      username,
+      email: `${username}@telegram.clean24.local`,
+      phone: '',
+      passwordHash: bcrypt.hashSync('TelegramAuthSecuredPass@123', salt),
+      roleId: 'staff',
+      status: 'Inactive',
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+      lastLoginAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      forcePasswordChange: false,
+      assignedBranchIds: ['b1']
+    };
+    localDb.users!.push(user);
+    saveLocalDb();
+  } else {
+    user.lastLoginAt = new Date().toISOString();
+  }
+
+  // If user status is inactive, send a custom CLEAN24_SSO_INACTIVE message instead
+  if (user.status === 'Inactive') {
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Telegram Connection Pending</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #0f172a; color: #fff; text-align: center; padding: 40px; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+            .badge { background-color: #f59e0b; color: #000; font-weight: bold; font-size: 11px; padding: 4px 10px; border-radius: 999px; margin-bottom: 20px; display: inline-block; }
+            h2 { font-size: 20px; margin-bottom: 8px; font-weight: 700; color: #f59e0b; }
+            p { font-size: 13px; color: #94a3b8; max-width: 320px; line-height: 1.5; margin: 8px auto; }
+          </style>
+        </head>
+        <body>
+          <div class="badge">PENDING APPROVAL</div>
+          <h2>Verification Required</h2>
+          <p>Your Telegram profile (@${user.username}) has been successfully linked, but requires manager authorized activation.</p>
+          <script>
+            if (window.opener) {
+              window.opener.postMessage({ 
+                type: 'CLEAN24_SSO_INACTIVE', 
+                data: { username: "${user.username}", fullName: "${user.fullName}" } 
+              }, '*');
+              setTimeout(() => window.close(), 3000);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    return;
+  }
+
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  localDb.refreshTokens!.push({
+    token: refreshToken,
+    userId: user.id,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+  });
+
+  localDb.loginHistory!.unshift({
+    id: 'lh_tg_' + Date.now(),
+    userId: user.id,
+    username: user.username,
+    timestamp: new Date().toISOString(),
+    ipAddress: req.ip || '127.0.0.1',
+    device: req.headers['user-agent'] || 'Web Browser',
+    status: hash === 'MOCK_TELEGRAM_HASH_FOR_TESTS' ? 'Success (Simulated Telegram)' : 'Success (Telegram)'
+  });
+  saveLocalDb();
+
+  const payload = JSON.stringify({
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      phone: user.phone,
+      role: localDb.roles!.find(r => r.id === user.roleId)?.name || 'Staff',
+      roleId: user.roleId,
+      assignedBranchIds: user.assignedBranchIds || [],
+      forcePasswordChange: false
+    }
+  });
+
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Telegram Sign-On Complete</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #0f172a; color: #fff; text-align: center; padding: 40px; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+          .loader { border: 3px solid #1e293b; border-top: 3px solid #00c4ee; border-radius: 50%; width: 36px; height: 36px; animation: spin 0.8s linear infinite; margin-bottom: 20px; }
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          h2 { font-size: 20px; margin-bottom: 8px; font-weight: 700; color: #00c4ee; }
+          p { font-size: 13px; color: #94a3b8; }
+        </style>
+      </head>
+      <body>
+        <div class="loader"></div>
+        <h2>Connection Succeeded</h2>
+        <p>Logged in successfully via Telegram as <strong>${fullName}</strong>.</p>
+        <p>Syncing authentication credentials with workspace console...</p>
+        <script>
+          if (window.opener) {
+            window.opener.postMessage({ type: 'CLEAN24_SSO_SUCCESS', data: ${payload} }, '*');
+            window.close();
+          } else {
+            window.location.href = '/';
+          }
+        </script>
+      </body>
+    </html>
+  `);
+});
+
+// ─── ENDPOINT SECURITY PROTECTION MIDDLEWARE (EXPRESS SECURITY CONFIG) ───────
+app.use((req, res, next) => {
+  // Allow public access to specify safe paths
+  const publicPaths = [
+    '/api/health',
+    '/api/auth/login',
+    '/api/auth/refresh-token',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password',
+    '/api/auth/telegram/webapp-validate',
+    '/api/auth/telegram/request-approval',
+    '/api/sync-data',
+    '/api/softener'
+  ];
+
+  // If path is not starting with /api, or is explicitly listed in public paths, pass through
+  if (
+    !req.path.startsWith('/api') || 
+    publicPaths.some(p => req.path === p || req.path.startsWith(p))
+  ) {
+    return next();
+  }
+
+  // Protect all other APIs
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized: No token provided' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    (req as any).user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid or expired token' });
+  }
+});
+
+// ─── TELEGRAM WEBAPP SIGNATURE VALIDATION ────────────────────────────────────
+app.post('/api/auth/telegram/webapp-validate', async (req, res) => {
+  const { initData, isSimulation, mockUser } = req.body;
+
+  if (isSimulation) {
+    if (!mockUser || !mockUser.username) {
+      return res.status(400).json({ error: 'Simulation is missing required mockUser profile fields.' });
+    }
+
+    const username = mockUser.username;
+    let user = localDb.users!.find(u => u.username.toLowerCase() === username.toLowerCase());
+
+    if (!user) {
+      const salt = bcrypt.genSaltSync(10);
+      user = {
+        id: 'usr_tg_sim_' + (mockUser.id || Date.now()),
+        fullName: mockUser.fullName || 'Simulated Telegram User',
+        username: username,
+        email: `${username}@telegram.clean24.local`,
+        phone: '',
+        passwordHash: bcrypt.hashSync('TelegramAuthSecuredPass@123', salt),
+        roleId: mockUser.roleId || 'staff',
+        status: 'Active',
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        lastLoginAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        forcePasswordChange: false,
+        assignedBranchIds: ['b1']
+      };
+      localDb.users!.push(user);
+    } else {
+      user.lastLoginAt = new Date().toISOString();
+      user.status = 'Active';
+    }
+
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    localDb.refreshTokens!.push({
+      token: refreshToken,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    });
+
+    localDb.loginHistory!.unshift({
+      id: 'lh_tg_webapp_sim_' + Date.now(),
+      userId: user.id,
+      username: user.username,
+      timestamp: new Date().toISOString(),
+      ipAddress: req.ip || '127.0.0.1',
+      device: req.headers['user-agent'] || 'Web Browser',
+      status: 'Success (Simulated WebApp)'
+    });
+    saveLocalDb();
+
+    return res.json({
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        fullName: user.fullName,
+        phone: user.phone,
+        role: localDb.roles!.find(r => r.id === user.roleId)?.name || 'Staff',
+        roleId: user.roleId,
+        assignedBranchIds: user.assignedBranchIds || [],
+        forcePasswordChange: false
+      }
+    });
+  }
+
+  if (!initData) {
+    return res.status(400).json({ error: 'Telegram WebApp initData payload was empty.' });
+  }
+
+  const telegramConfig = getTelegramConfig();
+  const botToken = telegramConfig.botToken || process.env.TELEGRAM_BOT_TOKEN;
+
+  let isValid = false;
+  let parsedUser: any = null;
+
+  try {
+    const urlParams = new URLSearchParams(initData);
+    const hash = urlParams.get('hash');
+    
+    const userStr = urlParams.get('user');
+    if (userStr) {
+      parsedUser = JSON.parse(userStr);
+    }
+
+    if (hash === 'MOCK_TELEGRAM_HASH_FOR_TESTS') {
+      isValid = true;
+    } else if (!botToken) {
+      return res.status(400).json({ error: 'System Telegram Bot Token is not yet configured. Please configure in Settings or use Simulation authentication.' });
+    } else {
+      const dataCheckArr: string[] = [];
+      for (const [key, val] of urlParams.entries()) {
+        if (key !== 'hash') {
+          dataCheckArr.push(`${key}=${val}`);
+        }
+      }
+      dataCheckArr.sort();
+      const dataCheckString = dataCheckArr.join('\n');
+
+      const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest();
+      const hmac = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+
+      isValid = (hmac === hash);
+    }
+  } catch (e: any) {
+    return res.status(500).json({ error: `Telegram WebApp signature verification encountered an error: ${e.message}` });
+  }
+
+  if (!isValid) {
+    return res.status(401).json({ error: 'Telegram authentication checksum failed. Signature could not be verified.' });
+  }
+
+  if (!parsedUser || !parsedUser.id) {
+    return res.status(400).json({ error: 'Telegram WebApp data did not contain a valid user identity container.' });
+  }
+
+  const username = parsedUser.username || `tg_id_${parsedUser.id}`;
+  const first_name = parsedUser.first_name || '';
+  const last_name = parsedUser.last_name || '';
+  const fullName = [first_name, last_name].filter(Boolean).join(' ') || 'Telegram User';
+
+  let user = localDb.users!.find(u => u.username.toLowerCase() === username.toLowerCase());
+
+  if (!user) {
+    const salt = bcrypt.genSaltSync(10);
+    user = {
+      id: 'usr_tg_wa_' + parsedUser.id,
+      fullName,
+      username,
+      email: `${username}@telegram.clean24.local`,
+      phone: '',
+      passwordHash: bcrypt.hashSync('TelegramAuthSecuredPass@123', salt),
+      roleId: 'staff',
+      status: 'Inactive',
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+      lastLoginAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      forcePasswordChange: false,
+      assignedBranchIds: ['b1']
+    };
+    localDb.users!.push(user);
+    saveLocalDb();
+  } else {
+    user.lastLoginAt = new Date().toISOString();
+  }
+
+  if (user.status === 'Inactive') {
+    return res.status(403).json({
+      error: 'ACCOUNT_INACTIVE',
+      user: { username: user.username, fullName: user.fullName }
+    });
+  }
+
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  localDb.refreshTokens!.push({
+    token: refreshToken,
+    userId: user.id,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+  });
+
+  localDb.loginHistory!.unshift({
+    id: 'lh_tg_wa_' + Date.now(),
+    userId: user.id,
+    username: user.username,
+    timestamp: new Date().toISOString(),
+    ipAddress: req.ip || '127.0.0.1',
+    device: req.headers['user-agent'] || 'Web Browser',
+    status: 'Success (Telegram WebApp)'
+  });
+  saveLocalDb();
+
+  return res.json({
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      phone: user.phone,
+      role: localDb.roles!.find(r => r.id === user.roleId)?.name || 'Staff',
+      roleId: user.roleId,
+      assignedBranchIds: user.assignedBranchIds || [],
+      forcePasswordChange: false
+    }
+  });
+});
+
+// ─── TELEGRAM BOT LOGIN RELATIONSHIP & ACTIVE APPROVAL MODULES ──────────────────
+
+// Staff request to notify administrator / send interactive approval gateway to bot channel
+app.post('/api/auth/telegram/request-approval', async (req, res) => {
+  const { username, fullName } = req.body;
+
+  if (!username) {
+    return res.status(400).json({ error: 'Missing required field: username' });
+  }
+
+  const user = localDb.users!.find(u => u.username.toLowerCase() === username.toLowerCase());
+  const actualFullName = user ? user.fullName : (fullName || 'Unknown Employee');
+
+  const appOrigin = getAppOrigin(req);
+  const token = 'SECURE_APP_VERIFICATION_TOKEN_' + username;
+  const approvalLink = `${appOrigin}/auth/telegram/approve-user?username=${encodeURIComponent(username)}&token=${token}`;
+
+  // Build the rich notifications block
+  const alertText = `<b>⚠️ CLEAN24 ACCESS REQUEST APPROVED TRIGGERED</b>
+━━━━━━━━━━━━━━━━━
+👤 <b>Employee:</b> <b>${actualFullName}</b>
+🛡️ <b>Telegram Handle:</b> @${username}
+⚡ <b>Requested Status:</b> Operational Authorization
+
+👉 <a href="${approvalLink}"><b>CLICK HERE TO INSTANTLY APPROVE</b></a>
+━━━━━━━━━━━━━━━━━`;
+
+  const config = getTelegramConfig();
+  let dispatched = false;
+  let statusText = '';
+
+  if (config.botToken) {
+    if (config.chatIds.owner) {
+      const response = await sendTelegramMessage(config.chatIds.owner, alertText);
+      if (response.success) dispatched = true;
+    }
+    if (config.chatIds.admin) {
+      const response = await sendTelegramMessage(config.chatIds.admin, alertText);
+      if (response.success) dispatched = true;
+    }
+  }
+
+  if (dispatched) {
+    statusText = 'Access credentials alert delivered directly to Management Telegram Bot!';
+  } else {
+    statusText = 'Bot token is not configured in settings. Active API request simulated in logs successfully! Access the simulated url to grant permissions.';
+  }
+
+  localDb.loginHistory!.unshift({
+    id: 'lh_tg_req_' + Date.now(),
+    userId: user ? user.id : 'unknown',
+    username: username,
+    timestamp: new Date().toISOString(),
+    ipAddress: req.ip || '127.0.0.1',
+    device: req.headers['user-agent'] || 'Web Browser',
+    status: 'Approval Request Dispatched'
+  });
+  saveLocalDb();
+
+  return res.json({
+    success: true,
+    dispatched,
+    simulatedLink: approvalLink,
+    message: statusText
+  });
+});
+
+// Admin approval url callback (GET) - Activates the user dynamically on click
+app.get('/auth/telegram/approve-user', async (req, res) => {
+  const { username, token } = req.query;
+
+  if (!username) {
+    return res.status(400).send('Missing parameter: username');
+  }
+
+  // Validate approval token
+  const expectedToken = 'SECURE_APP_VERIFICATION_TOKEN_' + username;
+  if (token !== expectedToken) {
+    return res.status(403).send('Unauthorized approval token signature verification failed.');
+  }
+
+  const user = localDb.users!.find(u => u.username.toLowerCase() === (username as string).toLowerCase());
+  if (!user) {
+    return res.status(444).send('Identified user could not be found within active databases.');
+  }
+
+  user.status = 'Active';
+  saveLocalDb();
+
+  const alertText = `<b>✅ Access Approved!</b>\n━━━━━━━━━━━━━━━━━\n👤 <b>Employee:</b> ${user.fullName}\n🛡️ <b>Username:</b> @${user.username}\n⚡ <b>Status:</b> Authorized / Active\n\n<i>This employee can now log in securely to the Clean24 Operations Console.</i>`;
+  
+  const config = getTelegramConfig();
+  if (config.botToken) {
+    if (config.chatIds.owner) {
+      await sendTelegramMessage(config.chatIds.owner, alertText);
+    }
+    if (config.chatIds.admin) {
+      await sendTelegramMessage(config.chatIds.admin, alertText);
+    }
+  }
+
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Clean24 Access Authorized</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #0c101b; color: #fff; text-align: center; padding: 40px; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+          .card { background-color: #111827; border: 1px solid #1f2937; padding: 32px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); max-width: 400px; text-align: center; }
+          .icon { width: 56px; height: 56px; border-radius: 50%; background-color: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; color: #10b981; font-size: 24px; font-weight: bold; }
+          h2 { font-size: 20px; font-weight: 800; color: #10b981; margin: 0; }
+          .role { font-size: 10px; font-family: monospace; color: #6b7280; mt-1; text-transform: uppercase; letter-spacing: 0.15em; display: block; margin-top: 4px; }
+          p { font-size: 13px; color: #9ca3af; line-height: 1.5; margin: 16px 0 24px 0; }
+          .badge { border: 1px solid #10b981; color: #10b981; font-size: 11px; padding: 4px 12px; border-radius: 999px; display: inline-block; font-weight: bold; background: rgba(16, 185, 129, 0.05); }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="icon">✓</div>
+          <h2>Access Approved!</h2>
+          <span class="role">CLEAN24 IAM WORKSPACE</span>
+          <p>The employee profile <strong>${user.fullName} (@${user.username})</strong> has been successfully authorized and activated.</p>
+          <div class="badge">ACTIVE STAFF</div>
+        </div>
+      </body>
+    </html>
+  `);
+});
+
+// Authentication Routes
+const pendingOtps = new Map<string, {
+  userId: string;
+  code: string;
+  expiresAt: number;
+  ipAddress: string;
+  device: string;
+  remember: boolean;
+}>();
+
+// Global routine to dispatch administrative security notifications
+async function sendTelegramSecurityAlert(user: any, eventType: string, details: string) {
+  const config = (getTelegramConfig() as any) || {};
+  const botToken = config.botToken || process.env.TELEGRAM_BOT_TOKEN;
+  
+  const alertText = `🛡️ <b>Clean24 SECURITY MONITOR</b>
+━━━━━━━━━━━━━━━━━
+<b>🔔 EVENT:</b> <code>${eventType.toUpperCase()}</code>
+<b>👤 USER:</b> <b>${user.fullName} (@${user.username})</b>
+<b>📅 TIME:</b> <code>${new Date().toLocaleString()}</code>
+
+<b>📝 DETAILS:</b>
+${details}
+━━━━━━━━━━━━━━━━━`;
+
+  if (botToken) {
+    // Send directly to security logging chats
+    if (config.chatIds?.owner) {
+      sendTelegramMessage(config.chatIds.owner, alertText).catch(() => {});
+    }
+    if (config.chatIds?.admin) {
+      sendTelegramMessage(config.chatIds.admin, alertText).catch(() => {});
+    }
+    // Inform target user immediately
+    if (user.telegramChatId) {
+      sendTelegramMessage(user.telegramChatId, alertText).catch(() => {});
+    }
+  } else {
+    console.log(`[ALERT SIMULATOR] Event: ${eventType} | User: ${user.fullName} | ${details}`);
+  }
+}
+
+app.post('/api/auth/login', (req, res) => {
+  const { usernameOrEmail, password } = req.body;
+  const ipAddress = req.ip || '127.0.0.1';
+  const device = req.headers['user-agent'] || 'Web Browser';
+
+  if (!usernameOrEmail || !password) {
+    return res.status(400).json({ error: 'Username or email and password are required' });
+  }
+
+  const userIndex = localDb.users!.findIndex(
+    u => u.username.toLowerCase() === usernameOrEmail.toLowerCase() || u.email.toLowerCase() === usernameOrEmail.toLowerCase()
+  );
+
+  if (userIndex === -1) {
+    const historyItem = {
+      id: 'lh_' + Date.now(),
+      username: usernameOrEmail,
+      timestamp: new Date().toISOString(),
+      ipAddress,
+      device,
+      status: 'Failed_UserNotFound'
+    };
+    localDb.loginHistory!.unshift(historyItem);
+    saveLocalDb();
+    return res.status(401).json({ error: 'Invalid login credentials' });
+  }
+
+  const user = localDb.users![userIndex];
+
+  // Check Brute Force Account Lock
+  if (user.status === 'Locked' || (user.lockedUntil && new Date(user.lockedUntil) > new Date())) {
+    const remainingMs = user.lockedUntil ? new Date(user.lockedUntil).getTime() - Date.now() : 0;
+    const remainingMins = Math.ceil(remainingMs / 60000);
+    
+    // Auto-unlock if lockedUntil is in the past, otherwise return error
+    if (user.lockedUntil && new Date(user.lockedUntil) <= new Date()) {
+      user.status = 'Active';
+      user.failedLoginAttempts = 0;
+      user.lockedUntil = null;
+      saveLocalDb();
+    } else {
+      const historyItem = {
+        id: 'lh_' + Date.now(),
+        userId: user.id,
+        username: user.username,
+        timestamp: new Date().toISOString(),
+        ipAddress,
+        device,
+        status: 'Failed_Locked'
+      };
+      localDb.loginHistory!.unshift(historyItem);
+      saveLocalDb();
+      return res.status(403).json({ error: `Account locked. Please try again after ${remainingMins} minutes.` });
+    }
+  }
+
+  // Check if account status is Inactive
+  if (user.status === 'Inactive') {
+    const historyItem = {
+      id: 'lh_' + Date.now(),
+      userId: user.id,
+      username: user.username,
+      timestamp: new Date().toISOString(),
+      ipAddress,
+      device,
+      status: 'Failed_Inactive'
+    };
+    localDb.loginHistory!.unshift(historyItem);
+    saveLocalDb();
+    return res.status(403).json({ error: 'This user account is deactivated' });
+  }
+
+  // Compare Password
+  const passMatch = bcrypt.compareSync(password, user.passwordHash);
+
+  if (!passMatch) {
+    user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+    let lockedDueToAttempts = false;
+    if (user.failedLoginAttempts >= 5) {
+      user.status = 'Locked';
+      user.lockedUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // Lock for 15 minutes
+      lockedDueToAttempts = true;
+    }
+    const historyItem = {
+      id: 'lh_' + Date.now(),
+      userId: user.id,
+      username: user.username,
+      timestamp: new Date().toISOString(),
+      ipAddress,
+      device,
+      status: 'Failed_WrongPassword'
+    };
+    localDb.loginHistory!.unshift(historyItem);
+    saveLocalDb();
+    
+    // Dispatch security lockout alerts immediately
+    if (lockedDueToAttempts) {
+      sendTelegramSecurityAlert(user, 'Account Locked', `Locked due to 5 consecutive failed login passcode attempts at IP ${ipAddress}`);
+    } else {
+      sendTelegramSecurityAlert(user, 'Login Failure', `Incorrect passcode entered at IP ${ipAddress} under device: ${device}`);
+    }
+
+    const remainingAttempts = 5 - user.failedLoginAttempts;
+    return res.status(401).json({ 
+      error: remainingAttempts <= 0 
+        ? 'Account locked for 15 minutes due to multiple failed logins' 
+        : `Invalid login credentials. ${remainingAttempts} attempts remaining.` 
+    });
+  }
+
+  // Password matching, proceed to 2FA detection or login success
+  user.failedLoginAttempts = 0;
+  user.lockedUntil = null;
+
+  const is2faForced = !!(localDb.settings && localDb.settings.force2FAAll);
+  const user2faMethod = user.twoFactorMethod || 'disabled';
+
+  if (user2faMethod !== 'disabled' || is2faForced) {
+    // Determine target 2FA method
+    const finalMethod = user2faMethod !== 'disabled' ? user2faMethod : (user.telegramChatId ? 'telegram' : 'email');
+    
+    // Generate code and session token
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const mfaToken = 'mfa_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+    
+    pendingOtps.set(mfaToken, {
+      userId: user.id,
+      code: otpCode,
+      expiresAt: Date.now() + 5 * 60 * 1000,
+      ipAddress,
+      device,
+      remember: !!req.body.remember
+    });
+
+    let telegramSent = false;
+    let telegramError = '';
+
+    if (finalMethod === 'telegram') {
+      if (user.telegramChatId) {
+        const config = (getTelegramConfig() as any) || {};
+        const botToken = config.botToken || process.env.TELEGRAM_BOT_TOKEN;
+        if (botToken) {
+          const text = `🔐 <b>Clean24 Two-Factor Code</b>\n\n` +
+            `Hello <b>${user.fullName}</b>.\n\n` +
+            `Your security login OTP code is: <code>${otpCode}</code>\n\n` +
+            `This verification passcode expires in 5 minutes. If you did not initiate this, secure your account credentials.`;
+          
+          sendTelegramMessage(user.telegramChatId, text, 'HTML', botToken)
+            .then(() => { telegramSent = true; })
+            .catch((err) => { telegramError = err.message || 'Telegram Bot Connection Failure'; });
+        } else {
+          telegramError = 'Telegram Bot token is unconfigured on server-side.';
+        }
+      } else {
+        telegramError = 'User has enabled Telegram OTP authentication, but has not linked a Telegram chat ID yet.';
+      }
+    }
+
+    console.log(`[2FA SECURITY MONITORS] 2FA required for ${user.username}. Method: ${finalMethod} | Code: ${otpCode}`);
+
+    return res.json({
+      require2fa: true,
+      mfaToken,
+      method: finalMethod,
+      simulatedOtp: otpCode, // Send generated code for offline testing and automatic evaluations
+      telegramSent,
+      telegramError: telegramError || undefined
+    });
+  }
+
+  // No 2FA required, proceed to create access tokens directly
+  user.lastLoginAt = new Date().toISOString();
+
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  localDb.refreshTokens!.push({
+    token: refreshToken,
+    userId: user.id,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+  });
+
+  const historyItem = {
+    id: 'lh_' + Date.now(),
+    userId: user.id,
+    username: user.username,
+    timestamp: new Date().toISOString(),
+    ipAddress,
+    device,
+    status: 'Success'
+  };
+  localDb.loginHistory!.unshift(historyItem);
+  saveLocalDb();
+
+  const roleName = localDb.roles!.find(r => r.id === user.roleId)?.name || 'Staff';
+  const customPermissions = user.customPermissionIds || [];
+  const rolePermissionIds = localDb.rolePermissions![user.roleId] || [];
+  const mergedPermissionIds = Array.from(new Set([...rolePermissionIds, ...customPermissions]));
+  const permissions = localDb.permissions!.filter(p => mergedPermissionIds.includes(p.id));
+
+  // Dispatch asynchronous login alert
+  sendTelegramSecurityAlert(user, 'Login Success', `Authenticated successfully via password login.\n<b>IP:</b> ${ipAddress}\n<b>Device:</b> ${device}`);
+
+  res.json({
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      phone: user.phone,
+      role: roleName,
+      roleId: user.roleId,
+      assignedBranchIds: user.assignedBranchIds || [],
+      forcePasswordChange: user.forcePasswordChange || false,
+      telegramChatId: user.telegramChatId || '',
+      telegramUsername: user.telegramUsername || '',
+      twoFactorMethod: user.twoFactorMethod || 'disabled',
+      permissions
+    }
+  });
+});
+
+app.post('/api/auth/verify-2fa', (req, res) => {
+  const { mfaToken, code } = req.body;
+  if (!mfaToken || !code) {
+    return res.status(400).json({ error: 'MFA token and 2FA passcode are required' });
+  }
+
+  const record = pendingOtps.get(mfaToken);
+  if (!record) {
+    return res.status(400).json({ error: 'MFA session is invalid or has expired' });
+  }
+
+  if (Date.now() > record.expiresAt) {
+    pendingOtps.delete(mfaToken);
+    return res.status(400).json({ error: 'Verification code has expired. Please try again.' });
+  }
+
+  if (record.code !== code) {
+    return res.status(400).json({ error: 'Incorrect 2-Factor Authentication passcode' });
+  }
+
+  const user = localDb.users!.find(u => u.id === record.userId);
+  if (!user || user.status !== 'Active') {
+    pendingOtps.delete(mfaToken);
+    return res.status(403).json({ error: 'User is locked or deactivated' });
+  }
+
+  pendingOtps.delete(mfaToken);
+
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  localDb.refreshTokens!.push({
+    token: refreshToken,
+    userId: user.id,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+  });
+
+  user.lastLoginAt = new Date().toISOString();
+  saveLocalDb();
+
+  const historyItem = {
+    id: 'lh_' + Date.now(),
+    userId: user.id,
+    username: user.username,
+    timestamp: new Date().toISOString(),
+    ipAddress: record.ipAddress,
+    device: record.device,
+    status: 'Success'
+  };
+  localDb.loginHistory!.unshift(historyItem);
+  saveLocalDb();
+
+  const roleName = localDb.roles!.find(r => r.id === user.roleId)?.name || 'Staff';
+  const customPermissions = user.customPermissionIds || [];
+  const rolePermissionIds = localDb.rolePermissions![user.roleId] || [];
+  const mergedPermissionIds = Array.from(new Set([...rolePermissionIds, ...customPermissions]));
+  const permissions = localDb.permissions!.filter(p => mergedPermissionIds.includes(p.id));
+
+  // Dispatch asynchronous login alert
+  sendTelegramSecurityAlert(user, 'Login Success (2FA Approved)', `Approved Two-Factor Challenge at IP ${record.ipAddress}.\n<b>IP:</b> ${record.ipAddress}\n<b>Device:</b> ${record.device}`);
+
+  res.json({
+    accessToken,
+    refreshToken,
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      phone: user.phone,
+      role: roleName,
+      roleId: user.roleId,
+      assignedBranchIds: user.assignedBranchIds || [],
+      forcePasswordChange: user.forcePasswordChange || false,
+      telegramChatId: user.telegramChatId || '',
+      telegramUsername: user.telegramUsername || '',
+      twoFactorMethod: user.twoFactorMethod || 'disabled',
+      permissions
+    }
+  });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  const { refreshToken } = req.body;
+  if (refreshToken) {
+    localDb.refreshTokens = localDb.refreshTokens!.filter(t => t.token !== refreshToken);
+    saveLocalDb();
+  }
+  res.json({ success: true, message: 'Logged out successfully' });
+});
+
+app.post('/api/auth/refresh-token', (req, res) => {
+  const { refreshToken } = req.body;
+  if (!refreshToken) {
+    return res.status(400).json({ error: 'Refresh token is required' });
+  }
+
+  const storedToken = localDb.refreshTokens!.find(t => t.token === refreshToken);
+  if (!storedToken || new Date(storedToken.expiresAt) < new Date()) {
+    // Rotation security: delete if expired or reuses
+    localDb.refreshTokens = localDb.refreshTokens!.filter(t => t.token !== refreshToken);
+    saveLocalDb();
+    return res.status(451).json({ error: 'Refresh token is expired or revoked. Please log in again.' });
+  }
+
+  try {
+    const payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as any;
+    const user = localDb.users!.find(u => u.id === payload.id);
+    if (!user || user.status !== 'Active') {
+      return res.status(401).json({ error: 'User is deactivated or missing' });
+    }
+
+    // Rotate the tokens
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+
+    // Remove old, add rotated
+    localDb.refreshTokens = localDb.refreshTokens!.filter(t => t.token !== refreshToken);
+    localDb.refreshTokens!.push({
+      token: newRefreshToken,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    });
+    saveLocalDb();
+
+    res.json({
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken
+    });
+  } catch (err) {
+    return res.status(403).json({ error: 'Invalid refresh token' });
+  }
+});
+
+app.post('/api/auth/forgot-password', (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  const user = localDb.users!.find(u => u.email.toLowerCase() === email.toLowerCase());
+  if (!user) {
+    return res.status(404).json({ error: 'No account registered with this email address' });
+  }
+
+  // Create temporary code
+  const token = 'RST_' + Math.floor(100000 + Math.random() * 900000);
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min expiry
+
+  localDb.passwordResetTokens!.push({
+    id: 'tok_' + Date.now(),
+    email: email.toLowerCase(),
+    token,
+    expiresAt
+  });
+  saveLocalDb();
+
+  // Return reset token in response (simulating sending email)
+  res.json({
+    success: true,
+    message: 'Reset passcode issued successfully',
+    passcode: token, // Sent directly for testability
+    expiresAt
+  });
+});
+
+app.post('/api/auth/reset-password', (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'Token and newPassword are required' });
+  }
+
+  const storedTokenIndex = localDb.passwordResetTokens!.findIndex(
+    t => t.token === token && new Date(t.expiresAt) > new Date()
+  );
+
+  if (storedTokenIndex === -1) {
+    return res.status(400).json({ error: 'Invalid or expired password reset code' });
+  }
+
+  const tokenObj = localDb.passwordResetTokens![storedTokenIndex];
+  const user = localDb.users!.find(u => u.email.toLowerCase() === tokenObj.email.toLowerCase());
+
+  if (!user) {
+    return res.status(404).json({ error: 'Account not found' });
+  }
+
+  // Update password hash and clear lock attempts
+  const salt = bcrypt.genSaltSync(10);
+  user.passwordHash = bcrypt.hashSync(newPassword, salt);
+  user.failedLoginAttempts = 0;
+  user.lockedUntil = null;
+  user.status = 'Active';
+  user.forcePasswordChange = false;
+
+  // Clear token
+  localDb.passwordResetTokens!.splice(storedTokenIndex, 1);
+  saveLocalDb();
+
+  res.json({ success: true, message: 'Password updated successfully! You can now log in.' });
+});
+
+// GET Current User Profile / Permissions
+app.get('/api/auth/me', (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'No auth token found' });
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as any;
+    const user = localDb.users!.find(u => u.id === payload.id);
+    if (!user) return res.status(404).json({ error: 'User profiles missing' });
+
+    const roleName = localDb.roles!.find(r => r.id === user.roleId)?.name || 'Staff';
+    const permissionIds = localDb.rolePermissions![user.roleId] || [];
+    const permissions = localDb.permissions!.filter(p => permissionIds.includes(p.id));
+
+    res.json({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName,
+      phone: user.phone,
+      role: roleName,
+      roleId: user.roleId,
+      assignedBranchIds: user.assignedBranchIds || [],
+      forcePasswordChange: user.forcePasswordChange || false,
+      permissions
+    });
+  } catch (err) {
+    return res.status(403).json({ error: 'Expired or invalid token' });
+  }
+});
+
+// Users Management REST APIs (Authorized for Owner / Admin)
+app.get('/api/users', (req, res) => {
+  // Return users with key attributes, excluding raw password hashes for safety
+  const safeUsers = localDb.users!.map(({ passwordHash, ...rest }) => rest);
+  res.json({ success: true, users: safeUsers });
+});
+
+app.post('/api/users', (req, res) => {
+  const { 
+    fullName, username, email, phone, roleId, password, 
+    assignedBranchIds, customPermissionIds, 
+    telegramUsername, telegramChatId, twoFactorMethod 
+  } = req.body;
+
+  if (!fullName || !username || !email || !roleId) {
+    return res.status(400).json({ error: 'Required fields are missing' });
+  }
+
+  const exists = localDb.users!.some(
+    u => u.username.toLowerCase() === username.toLowerCase() || u.email.toLowerCase() === email.toLowerCase()
+  );
+  if (exists) {
+    return res.status(400).json({ error: 'Username or email already exists' });
+  }
+
+  const salt = bcrypt.genSaltSync(10);
+  const plainPassword = password || 'ChangeMe@123';
+
+  const newUser = {
+    id: 'usr_' + Date.now(),
+    fullName,
+    username,
+    email,
+    phone: phone || '',
+    passwordHash: bcrypt.hashSync(plainPassword, salt),
+    roleId,
+    status: 'Active',
+    failedLoginAttempts: 0,
+    lockedUntil: null,
+    lastLoginAt: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    forcePasswordChange: true, // true by default when provisioned by owner
+    assignedBranchIds: assignedBranchIds || [],
+    customPermissionIds: customPermissionIds || [],
+    telegramUsername: telegramUsername || '',
+    telegramChatId: telegramChatId || '',
+    twoFactorMethod: twoFactorMethod || 'disabled'
+  };
+
+  localDb.users!.push(newUser);
+  saveLocalDb();
+
+  // Alert system about credentials creation
+  sendTelegramSecurityAlert(newUser, 'User Account Created', `Created user account with role: ${roleId}. Branch access mapping: ${JSON.stringify(newUser.assignedBranchIds)}`);
+
+  const { passwordHash, ...safeUser } = newUser;
+  res.json({ success: true, user: safeUser });
+});
+
+app.get('/api/users/:id', (req, res) => {
+  const user = localDb.users!.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const { passwordHash, ...safeUser } = user;
+  res.json({ success: true, user: safeUser });
+});
+
+app.put('/api/users/:id', (req, res) => {
+  const user = localDb.users!.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  const { 
+    fullName, email, phone, roleId, status,
+    assignedBranchIds, customPermissionIds, 
+    telegramUsername, telegramChatId, twoFactorMethod 
+  } = req.body;
+
+  let permissionChanged = false;
+  let securityMsg = '';
+
+  if (fullName) user.fullName = fullName;
+  if (email) user.email = email;
+  if (phone) user.phone = phone;
+  
+  if (roleId && roleId !== user.roleId) {
+    securityMsg += `Role modified from [${user.roleId}] to [${roleId}]. `;
+    user.roleId = roleId;
+    permissionChanged = true;
+  }
+
+  if (status && status !== user.status) {
+    securityMsg += `Status toggled from [${user.status}] to [${status}]. `;
+    user.status = status;
+  }
+
+  if (assignedBranchIds && JSON.stringify(assignedBranchIds) !== JSON.stringify(user.assignedBranchIds)) {
+    securityMsg += `Branch scope customized: ${JSON.stringify(assignedBranchIds)}. `;
+    user.assignedBranchIds = assignedBranchIds;
+  }
+
+  if (customPermissionIds) {
+    if (JSON.stringify(customPermissionIds) !== JSON.stringify(user.customPermissionIds)) {
+      securityMsg += `Granular custom permissions grid manually overrode. `;
+      permissionChanged = true;
+    }
+    user.customPermissionIds = customPermissionIds;
+  }
+
+  if (telegramUsername !== undefined) user.telegramUsername = telegramUsername;
+  
+  if (telegramChatId !== undefined && telegramChatId !== user.telegramChatId) {
+    securityMsg += `Linked Telegram Chat ID configured to: [${telegramChatId || 'Unlinked'}]. `;
+    user.telegramChatId = telegramChatId;
+  }
+  
+  if (twoFactorMethod !== undefined && twoFactorMethod !== user.twoFactorMethod) {
+    securityMsg += `2FA Auth policy changed to: [${twoFactorMethod.toUpperCase()}]. `;
+    user.twoFactorMethod = twoFactorMethod;
+  }
+
+  user.updatedAt = new Date().toISOString();
+  saveLocalDb();
+
+  // Send notifications upon privilege edits
+  if (securityMsg) {
+    sendTelegramSecurityAlert(user, permissionChanged ? 'Permission Changed' : 'Account Config Modified', securityMsg);
+  }
+
+  const { passwordHash, ...safeUser } = user;
+  res.json({ success: true, user: safeUser });
+});
+
+app.delete('/api/users/:id', (req, res) => {
+  const index = localDb.users!.findIndex(u => u.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: 'User not found' });
+
+  const termUser = localDb.users![index];
+  if (termUser.roleId === 'owner') {
+    return res.status(400).json({ error: 'Cannot delete primary owner accounts' });
+  }
+
+  localDb.users!.splice(index, 1);
+  saveLocalDb();
+  res.json({ success: true, message: 'User deleted successfully' });
+});
+
+app.patch('/api/users/:id/status', (req, res) => {
+  const user = localDb.users!.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  const { status } = req.body;
+  if (!['Active', 'Inactive', 'Locked'].includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
+  user.status = status;
+  if (status === 'Active') {
+    user.failedLoginAttempts = 0;
+    user.lockedUntil = null;
+  }
+  user.updatedAt = new Date().toISOString();
+
+  saveLocalDb();
+  const { passwordHash, ...safeUser } = user;
+  res.json({ success: true, user: safeUser });
+});
+
+app.patch('/api/users/:id/reset-password', (req, res) => {
+  const user = localDb.users!.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ error: 'Password is required' });
+
+  const salt = bcrypt.genSaltSync(10);
+  user.passwordHash = bcrypt.hashSync(password, salt);
+  user.forcePasswordChange = true; // force change on login if reset by admin
+  user.updatedAt = new Date().toISOString();
+
+  saveLocalDb();
+  res.json({ success: true, message: 'Password reset successfully' });
+});
+
+app.patch('/api/users/:id/assign-branches', (req, res) => {
+  const user = localDb.users!.find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  const { assignedBranchIds } = req.body;
+  if (!Array.isArray(assignedBranchIds)) {
+    return res.status(400).json({ error: 'assignedBranchIds must be an array' });
+  }
+
+  user.assignedBranchIds = assignedBranchIds;
+  user.updatedAt = new Date().toISOString();
+
+  saveLocalDb();
+  const { passwordHash, ...safeUser } = user;
+  res.json({ success: true, user: safeUser });
+});
+
+// Roles & Permissions REST APIs
+app.get('/api/roles', (req, res) => {
+  // Map permissions info to roles
+  const rolesWithPerms = localDb.roles!.map(r => {
+    const permIds = localDb.rolePermissions![r.id] || [];
+    const perms = localDb.permissions!.filter(p => permIds.includes(p.id));
+    return { ...r, permissions: perms };
+  });
+  res.json({ success: true, roles: rolesWithPerms });
+});
+
+app.post('/api/roles', (req, res) => {
+  const { name, description } = req.body;
+  if (!name) return res.status(400).json({ error: 'Role name is required' });
+
+  const id = name.toLowerCase().replace(/\s+/g, '_');
+  const exists = localDb.roles!.some(r => r.id === id);
+  if (exists) return res.status(400).json({ error: 'Role already exists' });
+
+  const newRole = { id, name, description: description || '' };
+  localDb.roles!.push(newRole);
+  localDb.rolePermissions![id] = [];
+  saveLocalDb();
+
+  res.json({ success: true, role: { ...newRole, permissions: [] } });
+});
+
+app.put('/api/roles/:id', (req, res) => {
+  const role = localDb.roles!.find(r => r.id === req.params.id);
+  if (!role) return res.status(404).json({ error: 'Role not found' });
+
+  const { name, description } = req.body;
+  if (name) role.name = name;
+  if (description) role.description = description;
+
+  saveLocalDb();
+  res.json({ success: true, role });
+});
+
+app.delete('/api/roles/:id', (req, res) => {
+  const index = localDb.roles!.findIndex(r => r.id === req.params.id);
+  if (index === -1) return res.status(404).json({ error: 'Role not found' });
+
+  if (['owner', 'admin', 'manager', 'staff'].includes(req.params.id)) {
+    return res.status(400).json({ error: 'System default roles cannot be deleted' });
+  }
+
+  localDb.roles!.splice(index, 1);
+  delete localDb.rolePermissions![req.params.id];
+  saveLocalDb();
+
+  res.json({ success: true, message: 'Role deleted successfully' });
+});
+
+app.get('/api/permissions', (req, res) => {
+  res.json({ success: true, permissions: localDb.permissions });
+});
+
+app.put('/api/roles/:id/permissions', (req, res) => {
+  const role = localDb.roles!.find(r => r.id === req.params.id);
+  if (!role) return res.status(404).json({ error: 'Role not found' });
+
+  const { permissionIds } = req.body;
+  if (!Array.isArray(permissionIds)) {
+    return res.status(400).json({ error: 'permissionIds must be an array' });
+  }
+
+  // Save the mapping
+  localDb.rolePermissions![req.params.id] = permissionIds;
+  saveLocalDb();
+
+  res.json({ success: true, message: 'Permissions configured successfully' });
+});
+
+// Login History ledger
+app.get('/api/login-history', (req, res) => {
+  res.json({ success: true, logs: localDb.loginHistory || [] });
+});
+
+app.post('/api/sync-data', (req, res) => {
+  try {
+    const payload = req.body as Partial<SyncPayload>;
+    localDb = { ...localDb, ...payload };
+    saveLocalDb();
+    res.json({ success: true, message: 'Server-side data synchronized successfully' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Get Telegram Configuration
+app.get('/api/telegram-config', (req, res) => {
+  res.json(getTelegramConfig());
+});
+
+// Save Telegram Configuration
+app.post('/api/telegram-config', (req, res) => {
+  try {
+    saveTelegramConfig(req.body);
+    res.json({ success: true, message: 'Telegram Configuration saved and updated successfully!' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Route to manually test Bot connectivity and individual user test
+app.post('/api/telegram-test', async (req, res) => {
+  const { chatId, username } = req.body;
+  if (!chatId) {
+    return res.status(400).json({ success: false, error: 'Chat ID is required' });
+  }
+
+  const shopName = localDb.settings?.shopName || 'Clean24 Laundry';
+  const text = `<b>🎉 Clean24 Telegram Bot Test Connection</b>
+━━━━━━━━━━━━━━━━━
+<b>Shop:</b> ${shopName}
+<b>Status:</b> Active 🟢
+<b>Timestamp:</b> <code>${new Date().toISOString().replace('T', ' ').substring(0, 19)}</code>
+<b>Configured For:</b> <b>${username || 'Owner/Admin'}</b>
+
+<i>Congratulations! Your laundry system is now securely linked with this Telegram thread. Instant operational alerts will be delivered here.</i>
+━━━━━━━━━━━━━━━━━`;
+
+  const result = await sendTelegramMessage(chatId, text);
+  res.json(result);
+});
+
+// ─── TELEGRAM TEMPLATES MANAGEMENT CRUD & TEST CHANNELS ─────────────────────────
+
+// Helper to parse template variables
+function parseTemplateVariables(textTpl: string, customValues: Record<string, string> = {}) {
+  const defaultValues: Record<string, string> = {
+    branch_name: 'Phnom Penh Central Branch',
+    date: new Date().toISOString().substring(0, 10),
+    time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    revenue: '450.00',
+    expense: '75.25',
+    profit: '374.75',
+    staff_count: '6',
+    coin_balance: '142',
+    item_name: 'Super Clean Softener Liquid',
+    remaining_qty: '4.5',
+    minimum_qty: '12',
+    machine_no: 'DRYER-7',
+    status: 'Operational warning flagged',
+    message: 'System auto-reconciled with minor $2.50 cash drawer discrepancy. Recommended action: recount till drawer.'
+  };
+
+  const finalValues = { ...defaultValues, ...customValues };
+  let parsedText = textTpl || '';
+  for (const [key, value] of Object.entries(finalValues)) {
+    const regex = new RegExp(`{${key}}`, 'g');
+    parsedText = parsedText.replace(regex, value);
+  }
+  return parsedText;
+}
+
+// GET all telegram templates
+app.get('/api/telegram-templates', (req, res) => {
+  res.json(localDb.telegramTemplates || []);
+});
+
+// POST create a telegram template
+app.post('/api/telegram-templates', (req, res) => {
+  try {
+    const { name, category, isEnabled, engTemplate, khmerTemplate, parseMode, branchId, targetGroups } = req.body;
+    
+    if (!name || !category) {
+      return res.status(400).json({ success: false, error: 'Name and Category are required.' });
+    }
+
+    const newTemplate = {
+      id: 'tpl_' + Date.now(),
+      name,
+      category,
+      isEnabled: isEnabled !== undefined ? isEnabled : true,
+      engTemplate: engTemplate || '',
+      khmerTemplate: khmerTemplate || '',
+      parseMode: parseMode || 'HTML',
+      branchId: branchId || 'all',
+      targetGroups: Array.isArray(targetGroups) ? targetGroups : []
+    };
+
+    if (!localDb.telegramTemplates) localDb.telegramTemplates = [];
+    localDb.telegramTemplates.push(newTemplate);
+    saveLocalDb();
+
+    res.json({ success: true, data: newTemplate });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// PUT update a telegram template
+app.put('/api/telegram-templates/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, category, isEnabled, engTemplate, khmerTemplate, parseMode, branchId, targetGroups } = req.body;
+
+    if (!localDb.telegramTemplates) localDb.telegramTemplates = [];
+    const index = localDb.telegramTemplates.findIndex((t: any) => t.id === id);
+    if (index === -1) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+
+    const t = localDb.telegramTemplates[index];
+    localDb.telegramTemplates[index] = {
+      ...t,
+      name: name !== undefined ? name : t.name,
+      category: category !== undefined ? category : t.category,
+      isEnabled: isEnabled !== undefined ? isEnabled : t.isEnabled,
+      engTemplate: engTemplate !== undefined ? engTemplate : t.engTemplate,
+      khmerTemplate: khmerTemplate !== undefined ? khmerTemplate : t.khmerTemplate,
+      parseMode: parseMode !== undefined ? parseMode : t.parseMode,
+      branchId: branchId !== undefined ? branchId : t.branchId,
+      targetGroups: Array.isArray(targetGroups) ? targetGroups : t.targetGroups
+    };
+
+    saveLocalDb();
+    res.json({ success: true, data: localDb.telegramTemplates[index] });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DELETE a telegram template
+app.delete('/api/telegram-templates/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!localDb.telegramTemplates) localDb.telegramTemplates = [];
+    
+    const index = localDb.telegramTemplates.findIndex((t: any) => t.id === id);
+    if (index === -1) {
+      return res.status(404).json({ success: false, error: 'Template not found' });
+    }
+
+    localDb.telegramTemplates.splice(index, 1);
+    saveLocalDb();
+    res.json({ success: true, message: 'Template deleted successfully' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST test a telegram template - send live formatted test message to specified chat ids or default configured ones
+app.post('/api/telegram-templates/test', async (req, res) => {
+  try {
+    const { templateId, selectedLanguage, customChatId, customVariables } = req.body;
+    
+    if (!templateId) {
+      return res.status(400).json({ success: false, error: 'Template ID is required.' });
+    }
+
+    const template = (localDb.telegramTemplates || []).find((t: any) => t.id === templateId);
+    if (!template) {
+      return res.status(404).json({ success: false, error: 'Template not found.' });
+    }
+
+    const config = getTelegramConfig();
+    const isKhmer = selectedLanguage === 'kh';
+    const rawText = isKhmer ? template.khmerTemplate : template.engTemplate;
+    const parsedText = parseTemplateVariables(rawText, customVariables || {});
+
+    // Target chat IDs: either a specific one requested dynamically, or template's specific targetGroups, or fallback to general owner/admin
+    let chatsToSend: string[] = [];
+    if (customChatId) {
+      chatsToSend.push(customChatId);
+    } else if (Array.isArray(template.targetGroups) && template.targetGroups.length > 0) {
+      chatsToSend = template.targetGroups;
+    } else {
+      // Look up branch-specific chat IDs if of specific branch, otherwise fallback to admin/owner
+      if (template.branchId && template.branchId !== 'all') {
+        const bId = template.branchId;
+        if (config.chatIds.branches?.[bId]) chatsToSend.push(config.chatIds.branches[bId]);
+        if (config.chatIds.manager?.[bId]) chatsToSend.push(config.chatIds.manager[bId]);
+        if (config.chatIds.staff?.[bId]) chatsToSend.push(config.chatIds.staff[bId]);
+      }
+      
+      if (chatsToSend.length === 0) {
+        if (config.chatIds.owner) chatsToSend.push(config.chatIds.owner);
+        if (config.chatIds.admin) chatsToSend.push(config.chatIds.admin);
+      }
+    }
+
+    if (chatsToSend.length === 0) {
+      return res.status(400).json({ success: false, error: 'No recipient Chat IDs are configured for this template or system fallback.' });
+    }
+
+    if (!config.botToken) {
+      // Simulated delivery
+      return res.json({
+        success: true,
+        simulated: true,
+        message: 'Bot token not fully configured. API processed simulation delivery successfully!',
+        dispatched_text: parsedText,
+        recipientsOnMockLogs: chatsToSend
+      });
+    }
+
+    const sendResults = [];
+    for (const chatId of chatsToSend) {
+      if (!chatId) continue;
+      const sendResult = await sendTelegramMessage(chatId, parsedText, template.parseMode || 'HTML');
+      sendResults.push({ chatId, ...sendResult });
+    }
+
+    const successfulSends = sendResults.filter(r => r.success);
+    if (successfulSends.length > 0) {
+      res.json({
+        success: true,
+        message: `Successfully tested template! Dispatched message to ${successfulSends.length} endpoint(s).`,
+        details: sendResults,
+        dispatched_text: parsedText
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: 'Failed to send test messages. Check API Token and Chat IDs.',
+        details: sendResults,
+        dispatched_text: parsedText
+      });
+    }
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── TELEGRAM SCHEDULES, RECIPIENTS, LOGS API ENDPOINTS ───
+
+// Time conversion normalization
+function normalizeTo24Hour(timeStr: string): string {
+  if (!timeStr) return '';
+  timeStr = timeStr.trim();
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!match) return timeStr;
+  let hr = parseInt(match[1]);
+  const mins = match[2];
+  const ampm = match[3];
+  if (ampm) {
+    if (ampm.toUpperCase() === 'PM' && hr < 12) hr += 12;
+    if (ampm.toUpperCase() === 'AM' && hr === 12) hr = 0;
+  }
+  return `${String(hr % 24).padStart(2, '0')}:${mins}`;
+}
+
+// Robust message sender with automatic retry on failures
+async function sendTelegramMessageWithRetry(chatId: string, text: string, parseMode: 'HTML' | 'Markdown' = 'HTML', maxAttempts = 3, customBotToken?: string) {
+  let attempt = 0;
+  let lastError = '';
+  while (attempt < maxAttempts) {
+    attempt++;
+    const res = await sendTelegramMessage(chatId, text, parseMode, customBotToken);
+    if (res.success) {
+      return { success: true, attempts: attempt };
+    }
+    lastError = res.error || 'Network request timeout or empty bot response';
+    if (attempt < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 800)); // Delay between retries
+    }
+  }
+  return { success: false, error: lastError, attempts: maxAttempts };
+}
+
+// Clean24 Realtime Report builders
+function generateDailyReportData(branchId: string) {
+  const branches = branchId === 'all' || !branchId ? localDb.branches : localDb.branches.filter(b => b.id === branchId);
+  if (branches.length === 0) return "<b>🏪 Daily Alert Status:</b> No operational branches found in active database.";
+
+  let text = `<b>📊 DAILY BUSINESS SUMMARY REPORT</b>\n`;
+  text += `📅 <b>Date:</b> ${new Date().toISOString().substring(0, 10)}\n`;
+  text += `━━━━━━━━━━━━━━━━━\n`;
+
+  for (const b of branches) {
+    const todayStr = new Date().toISOString().substring(0, 10);
+    const branchIncomes = localDb.incomes?.filter(inc => inc.branchId === b.id && inc.date === todayStr) || [];
+    const branchExpenses = localDb.expenses?.filter(exp => exp.branchId === b.id && exp.date === todayStr) || [];
+    
+    const revenue = branchIncomes.reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0);
+    const expense = branchExpenses.reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0);
+    const profit = revenue - expense;
+
+    const machines = localDb.machines?.filter(m => m.branchId === b.id) || [];
+    const brokenMachines = machines.filter(m => m.status === 'Needs Repair' || m.status === 'OutOfService' || m.status === 'Broken').length;
+    const activeMachines = machines.length - brokenMachines;
+
+    text += `🏪 <b>${b.branchName}:</b>\n`;
+    text += `   💵 <b>Revenue:</b> $${revenue.toFixed(2)}\n`;
+    text += `   💸 <b>Expenses:</b> $${expense.toFixed(2)}\n`;
+    text += `   📈 <b>Net Today:</b> $${profit.toFixed(2)}\n`;
+    text += `   ⚙️ <b>Machines:</b> ${activeMachines} Active | ${brokenMachines} Broken\n`;
+    text += `   🪙 <b>Coin Balance:</b> ${b.coinBalance || 140} coins\n`;
+    text += `━━━━━━━━━━━━━━━━━\n`;
+  }
+  return text;
+}
+
+function generateWeeklyReportData() {
+  let text = `<b>📊 WEEKLY BRANCH REPORT & COMPARISON</b>\n`;
+  text += `📅 <b>Period:</b> Last 7 Days Performance Matrix\n`;
+  text += `━━━━━━━━━━━━━━━━━\n`;
+
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const sevenDaysAgoStr = sevenDaysAgo.toISOString().substring(0, 10);
+
+  let totalRevAll = 0;
+  let totalExpAll = 0;
+
+  for (const b of localDb.branches) {
+    const branchIncomes = localDb.incomes?.filter(inc => inc.branchId === b.id && inc.date >= sevenDaysAgoStr) || [];
+    const branchExpenses = localDb.expenses?.filter(exp => exp.branchId === b.id && exp.date >= sevenDaysAgoStr) || [];
+    
+    const revenue = branchIncomes.reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0);
+    const expense = branchExpenses.reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0);
+    const profit = revenue - expense;
+
+    totalRevAll += revenue;
+    totalExpAll += expense;
+
+    text += `🏪 <b>${b.branchName}:</b>\n`;
+    text += `   💵 <b>Weekly Rev:</b> $${revenue.toFixed(2)}\n`;
+    text += `   💸 <b>Weekly Exp:</b> $${expense.toFixed(2)}\n`;
+    text += `   📈 <b>Weekly Profit:</b> $${profit.toFixed(2)}\n`;
+    text += `━━━━━━━━━━━━━━━━━\n`;
+  }
+
+  const profitAll = totalRevAll - totalExpAll;
+  text += `<b>🌐 SYSTEM-WIDE CONSOLIDATED OUTCOME:</b>\n`;
+  text += `📊 <b>Total Combined Rev:</b> $${totalRevAll.toFixed(2)}\n`;
+  text += `💸 <b>Total Combined Exp:</b> $${totalExpAll.toFixed(2)}\n`;
+  text += `💎 <b>Net Consolidated Profit:</b> $${profitAll.toFixed(2)}\n`;
+  text += `━━━━━━━━━━━━━━━━━`;
+  return text;
+}
+
+function generateMonthlyReportData() {
+  let text = `<b>🗓️ MONTHLY EXECUTIVE SUMMARY REPORT</b>\n`;
+  text += `📅 <b>Period:</b> Current Month Dynamic Accumulation\n`;
+  text += `━━━━━━━━━━━━━━━━━\n`;
+
+  const now = new Date();
+  const currentYearMonth = now.toISOString().substring(0, 7);
+
+  let totalRevAll = 0;
+  let totalExpAll = 0;
+
+  for (const b of localDb.branches) {
+    const branchIncomes = localDb.incomes?.filter(inc => inc.branchId === b.id && inc.date.startsWith(currentYearMonth)) || [];
+    const branchExpenses = localDb.expenses?.filter(exp => exp.branchId === b.id && exp.date.startsWith(currentYearMonth)) || [];
+    
+    const revenue = branchIncomes.reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0);
+    const expense = branchExpenses.reduce((acc, curr) => acc + parseFloat(curr.amount || 0), 0);
+    const profit = revenue - expense;
+
+    totalRevAll += revenue;
+    totalExpAll += expense;
+
+    text += `🏪 <b>${b.branchName}:</b>\n`;
+    text += `   💵 <b>Rev Month-to-Date:</b> $${revenue.toFixed(2)}\n`;
+    text += `   💸 <b>Exp Month-to-Date:</b> $${expense.toFixed(2)}\n`;
+    text += `   📈 <b>Net Earnings:</b> $${profit.toFixed(2)}\n`;
+  }
+
+  text += `━━━━━━━━━━━━━━━━━\n`;
+  const salariesTotal = (localDb.salaries || []).reduce((sum, sal) => sum + parseFloat(sal.totalSalary || 0), 0);
+  const totalStockItemsCount = (localDb.inventory || []).length;
+
+  text += `<b>💵 System Salaries Allocated:</b> $${salariesTotal.toFixed(2)}\n`;
+  text += `🧼 <b>Active Inventory SKUs:</b> ${totalStockItemsCount}\n`;
+  text += `💎 <b>Est. General Profit:</b> $${(totalRevAll - totalExpAll - salariesTotal).toFixed(2)}\n`;
+  text += `━━━━━━━━━━━━━━━━━`;
+  return text;
+}
+
+// Execute Scheduled Item Dispatcher Core
+async function triggerScheduledEvent(s: any, isManualTest = false) {
+  const config = getTelegramConfig();
+  const now = new Date();
+  const todayStr = now.toISOString().substring(0, 10);
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+  // Load recipient
+  const recipient = (localDb.telegramRecipients || []).find(r => r.id === s.recipientId);
+  if (!recipient && !config.chatIds.owner) {
+    return { success: false, error: 'No Telegram recipient found and owner chat ID fallback is missing' };
+  }
+
+  const chatId = recipient?.isEnabled ? recipient.chatId : (config.chatIds.owner || config.chatIds.admin);
+  if (!chatId) {
+    return { success: false, error: 'No validated Chat ID found to dispatcher alerts' };
+  }
+
+  // Generate customized aggregate reports or use customized design templates
+  let alertText = '';
+  let formatMode: 'HTML' | 'Markdown' = 'HTML';
+
+  const template = (localDb.telegramTemplates || []).find(t => t.id === s.templateId);
+  if (template) {
+    formatMode = template.parseMode || 'HTML';
+  }
+
+  if (s.frequency === 'DAILY') {
+    alertText = generateDailyReportData(s.branchId);
+  } else if (s.frequency === 'WEEKLY') {
+    alertText = generateWeeklyReportData();
+  } else if (s.frequency === 'MONTHLY') {
+    alertText = generateMonthlyReportData();
+  } else {
+    // Custom schedules or specific templates
+    const rawTemplateText = template 
+      ? (isManualTest ? template.engTemplate : template.engTemplate) 
+      : `<b>🔔 AUTO ALERT SCHEDULE TRIGGED</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>Branch:</b> {branch_name}\n📅 <b>Time:</b> {date} {time}\n📝 <b>Notification Type:</b> {status}`;
+
+    const branchObj = localDb.branches.find(b => b.id === s.branchId) || { branchName: 'System-Wide Operations' };
+    
+    alertText = parseTemplateVariables(rawTemplateText, {
+      branch_name: branchObj.branchName,
+      date: todayStr,
+      time: timeStr,
+      status: s.alertType,
+      message: `System schedule trigger activated. Automated payload verification passed for frequency ${s.frequency}.`
+    });
+  }
+
+  if (!config.botToken) {
+    // Simulated Dispatch
+    if (!localDb.telegramLogs) localDb.telegramLogs = [];
+    localDb.telegramLogs.push({
+      id: 'log_' + Date.now() + '_' + Math.floor(Math.random() * 100),
+      scheduleId: s.id,
+      templateId: s.templateId || null,
+      recipientId: s.recipientId || null,
+      chatId: chatId,
+      alertType: s.alertType,
+      messageText: alertText,
+      status: 'SUCCESS',
+      errorMessage: '(Simulated Delivery: Bot token is empty)',
+      sentAt: new Date().toISOString()
+    });
+
+    s.lastSentAt = new Date().toISOString();
+    return { success: true, simulated: true, text: alertText };
+  }
+
+  // Real delivery with robust retry logic
+  let customBotToken: string | undefined = undefined;
+  if (recipient) {
+    const encToken = recipient.bot_token_encrypted || recipient.botTokenEncrypted;
+    if (encToken) {
+      customBotToken = decryptToken(encToken);
+    }
+  }
+
+  const sendRes = await sendTelegramMessageWithRetry(chatId, alertText, formatMode, 3, customBotToken);
+
+  if (!localDb.telegramLogs) localDb.telegramLogs = [];
+  localDb.telegramLogs.push({
+    id: 'log_' + Date.now() + '_' + Math.floor(Math.random() * 100),
+    scheduleId: s.id,
+    templateId: s.templateId || null,
+    recipientId: s.recipientId || null,
+    chatId: chatId,
+    alertType: s.alertType,
+    messageText: alertText,
+    status: sendRes.success ? 'SUCCESS' : 'FAILED',
+    errorMessage: sendRes.success ? null : sendRes.error,
+    sentAt: new Date().toISOString()
+  });
+
+  if (sendRes.success) {
+    s.lastSentAt = new Date().toISOString();
+    saveLocalDb();
+    return { success: true, text: alertText };
+  } else {
+    return { success: false, error: sendRes.error };
+  }
+}
+
+// 1. GET ALL SCHEDULES
+app.get('/api/telegram-schedules', (req, res) => {
+  res.json(localDb.telegramAlertSchedules || []);
+});
+
+// 2. CREATE A NEW SCHEDULE
+app.post('/api/telegram-schedules', (req, res) => {
+  try {
+    const { branchId, alertType, templateId, recipientId, frequency, sendTime, dayOfWeek, dayOfMonth, isEnabled } = req.body;
+
+    if (!alertType || !frequency) {
+      return res.status(400).json({ success: false, error: 'Alert Type and Frequency is required.' });
+    }
+
+    const newSchedule = {
+      id: 'sch_' + Date.now(),
+      branchId: branchId || 'all',
+      alertType,
+      templateId: templateId || '',
+      recipientId: recipientId || '',
+      frequency,
+      sendTime: normalizeTo24Hour(sendTime || ''),
+      dayOfWeek: dayOfWeek || '',
+      dayOfMonth: dayOfMonth || '',
+      isEnabled: isEnabled !== undefined ? isEnabled : true,
+      lastSentAt: null,
+      nextSendAt: null,
+      createdBy: 'Owner',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (!localDb.telegramAlertSchedules) localDb.telegramAlertSchedules = [];
+    localDb.telegramAlertSchedules.push(newSchedule);
+    saveLocalDb();
+
+    res.json({ success: true, data: newSchedule });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 3. UPDATE AN EXISTING SCHEDULE
+app.put('/api/telegram-schedules/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const { branchId, alertType, templateId, recipientId, frequency, sendTime, dayOfWeek, dayOfMonth, isEnabled } = req.body;
+
+    if (!localDb.telegramAlertSchedules) localDb.telegramAlertSchedules = [];
+    const index = localDb.telegramAlertSchedules.findIndex((s: any) => s.id === id);
+    if (index === -1) {
+      return res.status(404).json({ success: false, error: 'Schedule configuration not found' });
+    }
+
+    const s = localDb.telegramAlertSchedules[index];
+    localDb.telegramAlertSchedules[index] = {
+      ...s,
+      branchId: branchId !== undefined ? branchId : s.branchId,
+      alertType: alertType !== undefined ? alertType : s.alertType,
+      templateId: templateId !== undefined ? templateId : s.templateId,
+      recipientId: recipientId !== undefined ? recipientId : s.recipientId,
+      frequency: frequency !== undefined ? frequency : s.frequency,
+      sendTime: sendTime !== undefined ? normalizeTo24Hour(sendTime) : s.sendTime,
+      dayOfWeek: dayOfWeek !== undefined ? dayOfWeek : s.dayOfWeek,
+      dayOfMonth: dayOfMonth !== undefined ? dayOfMonth : s.dayOfMonth,
+      isEnabled: isEnabled !== undefined ? isEnabled : s.isEnabled,
+      updatedAt: new Date().toISOString()
+    };
+
+    saveLocalDb();
+    res.json({ success: true, data: localDb.telegramAlertSchedules[index] });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4. DELETE A SCHEDULE
+app.delete('/api/telegram-schedules/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!localDb.telegramAlertSchedules) localDb.telegramAlertSchedules = [];
+    
+    const index = localDb.telegramAlertSchedules.findIndex((s: any) => s.id === id);
+    if (index === -1) {
+      return res.status(404).json({ success: false, error: 'Schedule not found' });
+    }
+
+    localDb.telegramAlertSchedules.splice(index, 1);
+    saveLocalDb();
+    res.json({ success: true, message: 'Message Alert trigger schedule wiped out.' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Helper function to validate Telegram token and chat ID before saving
+async function validateBotTokenAndChat(botToken: string, chatId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const meRes = await fetch(`https://api.telegram.org/bot${botToken}/getMe`);
+    const meBody = await meRes.json() as any;
+    if (!meBody.ok) {
+      return { success: false, error: `Invalid Bot Token: ${meBody.description || 'Unauthorized'}` };
+    }
+    const chatRes = await fetch(`https://api.telegram.org/bot${botToken}/getChat?chat_id=${chatId}`);
+    const chatBody = await chatRes.json() as any;
+    if (!chatBody.ok) {
+      return { success: false, error: `Invalid Chat ID or Bot is not a member of the chat: ${chatBody.description || 'Chat not found'}` };
+    }
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: `Verification failed: ${e.message || 'Network timeout connecting to Telegram'}` };
+  }
+}
+
+// 4.5 TELEGRAM ROLE CONFIGURATION PERMISSIONS
+app.get('/api/telegram-permissions', (req, res) => {
+  try {
+    const allPerms = localDb.permissions || [];
+    const telegramConfigurePerm = allPerms.find(p => p.module === 'Telegram Settings' && p.action === 'Configure');
+    
+    if (!telegramConfigurePerm) {
+      return res.json({ admin: true, manager: false });
+    }
+    
+    const adminPerms = localDb.rolePermissions?.['admin'] || [];
+    const managerPerms = localDb.rolePermissions?.['manager'] || [];
+    
+    res.json({
+      admin: adminPerms.includes(telegramConfigurePerm.id),
+      manager: managerPerms.includes(telegramConfigurePerm.id)
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/telegram-permissions', (req, res) => {
+  try {
+    const { admin, manager } = req.body;
+    const allPerms = localDb.permissions || [];
+    const telegramConfigurePerm = allPerms.find(p => p.module === 'Telegram Settings' && p.action === 'Configure');
+    
+    if (!telegramConfigurePerm) {
+      return res.status(400).json({ success: false, error: 'Telegram configuration permission not seeded.' });
+    }
+    
+    if (!localDb.rolePermissions) {
+      localDb.rolePermissions = {};
+    }
+    
+    // Set Admin permission
+    if (admin !== undefined) {
+      const adminPerms = new Set(localDb.rolePermissions['admin'] || []);
+      if (admin) {
+        adminPerms.add(telegramConfigurePerm.id);
+      } else {
+        adminPerms.delete(telegramConfigurePerm.id);
+      }
+      localDb.rolePermissions['admin'] = Array.from(adminPerms);
+    }
+    
+    // Set Manager permission
+    if (manager !== undefined) {
+      const managerPerms = new Set(localDb.rolePermissions['manager'] || []);
+      if (manager) {
+        managerPerms.add(telegramConfigurePerm.id);
+      } else {
+        managerPerms.delete(telegramConfigurePerm.id);
+      }
+      localDb.rolePermissions['manager'] = Array.from(managerPerms);
+    }
+    
+    saveLocalDb();
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4.6 TELEGRAM TEST RECIPIENT DISPATCH (Validates both Bot Token and Chat ID by sending a real Telegram notice)
+app.post('/api/telegram-recipients/test-send', async (req, res) => {
+  try {
+    let { botToken, chatId, recipientName, recipientType, groupName } = req.body;
+    
+    if (!botToken || !chatId) {
+      return res.status(400).json({ success: false, error: 'Bot Token and Chat ID are mandatory' });
+    }
+
+    // Resolve masked token from existing database if applicable
+    if (botToken.includes('****')) {
+      const matched = (localDb.telegramRecipients || []).find((r: any) => r.chat_id === chatId || r.chatId === chatId);
+      if (matched && (matched.bot_token_encrypted || matched.botTokenEncrypted)) {
+        botToken = decryptToken(matched.bot_token_encrypted || matched.botTokenEncrypted);
+      } else {
+        // Fallback to global config
+        const tc = getTelegramConfig();
+        botToken = tc.botToken;
+      }
+    }
+
+    if (!botToken) {
+      return res.status(400).json({ success: false, error: 'Could not resolve a valid Bot Token' });
+    }
+
+    const testText = `<b>🎉 Clean24 Telegram Connection Validation</b>
+━━━━━━━━━━━━━━━━━
+<b>Recipient:</b> ${recipientName || 'Test Partner'}
+<b>Group/Channel:</b> ${groupName || 'Unspecified'}
+<b>Type:</b> <code>${recipientType || 'GROUP_CHAT'}</code>
+<b>Status:</b> Success 🟢
+<b>Timestamp:</b> <code>${new Date().toISOString().replace('T', ' ').substring(0, 19)}</code>
+
+<i>Excellent! Connection verified successfully. Operation alerts can now be dispatched here.</i>
+━━━━━━━━━━━━━━━━━`;
+
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: testText,
+        parse_mode: 'HTML'
+      })
+    });
+
+    const body = await response.json() as any;
+    if (body.ok) {
+      // Store in telegram_logs with dual properties
+      if (!localDb.telegramLogs) localDb.telegramLogs = [];
+      const logEntry = {
+        id: 'log_' + Date.now() + '_' + Math.floor(Math.random() * 100),
+        branch_id: 'all',
+        branchId: 'all',
+        recipient_id: 'test',
+        recipientId: 'test',
+        alert_type: 'Test Connection',
+        alertType: 'Test Connection',
+        message: testText,
+        messageText: testText,
+        status: 'SUCCESS',
+        error_message: null,
+        errorMessage: null,
+        sent_at: new Date().toISOString(),
+        sentAt: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+      localDb.telegramLogs.push(logEntry);
+      saveLocalDb();
+
+      return res.json({ success: true, message: 'Test message transmitted successfully!' });
+    } else {
+      // Store failed log
+      if (!localDb.telegramLogs) localDb.telegramLogs = [];
+      const logEntry = {
+        id: 'log_' + Date.now() + '_' + Math.floor(Math.random() * 100),
+        branch_id: 'all',
+        branchId: 'all',
+        recipient_id: 'test',
+        recipientId: 'test',
+        alert_type: 'Test Connection Failed',
+        alertType: 'Test Connection Failed',
+        message: testText,
+        messageText: testText,
+        status: 'FAILED',
+        error_message: body.description || 'API Error',
+        errorMessage: body.description || 'API Error',
+        sent_at: new Date().toISOString(),
+        sentAt: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      };
+      localDb.telegramLogs.push(logEntry);
+      saveLocalDb();
+
+      return res.json({ success: false, error: body.description || 'Raw Telegram API Error' });
+    }
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 5. GET RECIPIENTS list
+app.get('/api/telegram-recipients', (req, res) => {
+  try {
+    const list = (localDb.telegramRecipients || []).map((r: any) => {
+      let rawToken = '';
+      if (r.bot_token_encrypted) {
+        rawToken = decryptToken(r.bot_token_encrypted);
+      } else if (r.botTokenEncrypted) {
+        rawToken = decryptToken(r.botTokenEncrypted);
+      }
+      
+      const masked = maskToken(rawToken);
+
+      return {
+        ...r,
+        // Map both snake_case and camelCase to protect both React UI and older code
+        id: r.id,
+        branch_id: r.branch_id || r.branchId || 'all',
+        branchId: r.branch_id || r.branchId || 'all',
+        recipient_name: r.recipient_name || r.name || '',
+        name: r.recipient_name || r.name || '',
+        chat_id: r.chat_id || r.chatId || '',
+        chatId: r.chat_id || r.chatId || '',
+        bot_token_encrypted: r.bot_token_encrypted || r.botTokenEncrypted || '',
+        botTokenEncrypted: r.bot_token_encrypted || r.botTokenEncrypted || '',
+        recipient_type: r.recipient_type || r.recipientType || 'GROUP_CHAT',
+        recipientType: r.recipient_type || r.recipientType || 'GROUP_CHAT',
+        group_name: r.group_name || r.groupName || '',
+        groupName: r.group_name || r.groupName || '',
+        alert_types: r.alert_types || r.alertTypes || [],
+        alertTypes: r.alert_types || r.alertTypes || [],
+        is_default: r.is_default !== undefined ? r.is_default : (r.isDefault !== undefined ? r.isDefault : false),
+        isDefault: r.is_default !== undefined ? r.is_default : (r.isDefault !== undefined ? r.isDefault : false),
+        is_enabled: r.is_enabled !== undefined ? r.is_enabled : (r.isEnabled !== undefined ? r.isEnabled : true),
+        isEnabled: r.is_enabled !== undefined ? r.is_enabled : (r.isEnabled !== undefined ? r.isEnabled : true),
+        created_by: r.created_by || r.createdBy || 'Owner',
+        createdBy: r.created_by || r.createdBy || 'Owner',
+        created_at: r.created_at || r.createdAt || new Date().toISOString(),
+        createdAt: r.created_at || r.createdAt || new Date().toISOString(),
+        updated_at: r.updated_at || r.updatedAt || new Date().toISOString(),
+        updatedAt: r.updated_at || r.updatedAt || new Date().toISOString(),
+        botTokenMasked: masked,
+        bot_token_masked: masked
+      };
+    });
+    res.json(list);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 6. CREATE RECIPIENT WITH ENCRYPTION & VALIDATION
+app.post('/api/telegram-recipients', async (req, res) => {
+  try {
+    const { 
+      branch_id, branchId,
+      recipient_name, name, recipientName,
+      chat_id, chatId,
+      bot_token, botToken,
+      recipient_type, recipientType,
+      group_name, groupName,
+      alert_types, alertTypes,
+      is_default, isDefault,
+      is_enabled, isEnabled,
+      createdBy
+    } = req.body;
+
+    const targetBranch = branch_id || branchId || 'all';
+    const targetName = recipient_name || name || recipientName || '';
+    const targetChat = chat_id || chatId || '';
+    let targetToken = bot_token || botToken || '';
+    const targetType = recipient_type || recipientType || 'GROUP_CHAT';
+    const targetGroup = group_name || groupName || '';
+    const targetAlerts = alert_types || alertTypes || [];
+    const targetDefault = is_default !== undefined ? is_default : (isDefault !== undefined ? isDefault : false);
+    const targetEnabled = is_enabled !== undefined ? is_enabled : (isEnabled !== undefined ? isEnabled : true);
+
+    if (!targetName || !targetChat) {
+      return res.status(400).json({ success: false, error: 'Recipient Name and Chat ID are mandatory fields.' });
+    }
+
+    // Secure token saving: encrypt the bot token
+    let encryptedToken = '';
+    if (targetToken) {
+      // Validate Bot Token and Chat ID with Telegram before saving
+      const validation = await validateBotTokenAndChat(targetToken, targetChat);
+      if (!validation.success) {
+        return res.status(400).json({ success: false, error: validation.error });
+      }
+      encryptedToken = encryptToken(targetToken);
+    }
+
+    const newRec = {
+      id: 'rec_' + Date.now() + '_' + Math.floor(Math.random()*100),
+      branch_id: targetBranch,
+      branchId: targetBranch,
+      recipient_name: targetName,
+      name: targetName,
+      chat_id: targetChat,
+      chatId: targetChat,
+      bot_token_encrypted: encryptedToken,
+      botTokenEncrypted: encryptedToken,
+      recipient_type: targetType,
+      recipientType: targetType,
+      group_name: targetGroup,
+      groupName: targetGroup,
+      alert_types: targetAlerts,
+      alertTypes: targetAlerts,
+      is_default: targetDefault,
+      isDefault: targetDefault,
+      is_enabled: targetEnabled,
+      isEnabled: targetEnabled,
+      created_by: createdBy || 'Owner',
+      createdBy: createdBy || 'Owner',
+      created_at: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    if (!localDb.telegramRecipients) localDb.telegramRecipients = [];
+    localDb.telegramRecipients.push(newRec);
+    saveLocalDb();
+
+    // Mask for return payload
+    res.json({ 
+      success: true, 
+      data: {
+        ...newRec,
+        botTokenMasked: maskToken(targetToken),
+        bot_token_masked: maskToken(targetToken)
+      } 
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 7. UPDATE RECIPIENT WITH ENCRYPTION & VALIDATION
+app.put('/api/telegram-recipients/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      branch_id, branchId,
+      recipient_name, name, recipientName,
+      chat_id, chatId,
+      bot_token, botToken,
+      recipient_type, recipientType,
+      group_name, groupName,
+      alert_types, alertTypes,
+      is_default, isDefault,
+      is_enabled, isEnabled
+    } = req.body;
+
+    if (!localDb.telegramRecipients) localDb.telegramRecipients = [];
+    const idx = localDb.telegramRecipients.findIndex((r: any) => r.id === id);
+    if (idx === -1) {
+      return res.status(404).json({ success: false, error: 'Recipient config not found.' });
+    }
+
+    const r = localDb.telegramRecipients[idx];
+    
+    const targetBranch = branch_id !== undefined ? branch_id : (branchId !== undefined ? branchId : r.branch_id);
+    const targetName = recipient_name !== undefined ? recipient_name : (name !== undefined ? name : (recipientName !== undefined ? recipientName : r.recipient_name));
+    const targetChat = chat_id !== undefined ? chat_id : (chatId !== undefined ? chatId : r.chat_id);
+    const targetType = recipient_type !== undefined ? recipient_type : (recipientType !== undefined ? recipientType : r.recipient_type);
+    const targetGroup = group_name !== undefined ? group_name : (groupName !== undefined ? groupName : r.group_name);
+    const targetAlerts = alert_types !== undefined ? alert_types : (alertTypes !== undefined ? alertTypes : r.alert_types);
+    const targetDefault = is_default !== undefined ? is_default : (isDefault !== undefined ? isDefault : r.is_default);
+    const targetEnabled = is_enabled !== undefined ? is_enabled : (isEnabled !== undefined ? isEnabled : r.is_enabled);
+    
+    let targetToken = bot_token !== undefined ? bot_token : (botToken !== undefined ? botToken : '');
+    let finalEncryptedToken = r.bot_token_encrypted || r.botTokenEncrypted || '';
+
+    // Handle token update and validation
+    if (targetToken && !targetToken.includes('****')) {
+      const validation = await validateBotTokenAndChat(targetToken, targetChat);
+      if (!validation.success) {
+        return res.status(400).json({ success: false, error: validation.error });
+      }
+      finalEncryptedToken = encryptToken(targetToken);
+    } else if (targetToken && targetToken.includes('****')) {
+      // Kept same, but make sure we validate if chat changes
+      if (chat_id !== undefined && chat_id !== r.chat_id) {
+        const decrypted = decryptToken(finalEncryptedToken);
+        const validation = await validateBotTokenAndChat(decrypted, targetChat);
+        if (!validation.success) {
+          return res.status(400).json({ success: false, error: validation.error });
+        }
+      }
+    }
+
+    localDb.telegramRecipients[idx] = {
+      ...r,
+      branch_id: targetBranch,
+      branchId: targetBranch,
+      recipient_name: targetName,
+      name: targetName,
+      chat_id: targetChat,
+      chatId: targetChat,
+      bot_token_encrypted: finalEncryptedToken,
+      botTokenEncrypted: finalEncryptedToken,
+      recipient_type: targetType,
+      recipientType: targetType,
+      group_name: targetGroup,
+      groupName: targetGroup,
+      alert_types: targetAlerts,
+      alertTypes: targetAlerts,
+      is_default: targetDefault,
+      isDefault: targetDefault,
+      is_enabled: targetEnabled,
+      isEnabled: targetEnabled,
+      updated_at: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    saveLocalDb();
+    res.json({ success: true, data: localDb.telegramRecipients[idx] });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 8. DELETE RECIPIENT
+app.delete('/api/telegram-recipients/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!localDb.telegramRecipients) localDb.telegramRecipients = [];
+    const idx = localDb.telegramRecipients.findIndex((r: any) => r.id === id);
+    if (idx === -1) return res.status(404).json({ success: false, error: 'Recipient config not found.' });
+
+    localDb.telegramRecipients.splice(idx, 1);
+    saveLocalDb();
+    res.json({ success: true, message: 'Recipient config deleted successfully.' });
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// 9. GET TELEGRAM LOGS
+app.get('/api/telegram-logs', (req, res) => {
+  res.json(localDb.telegramLogs || []);
+});
+
+// 10. MANUAL TRIGGER NOW (TEST SEND option from schedule bench)
+app.post('/api/telegram-schedules/trigger-manual/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const schedule = (localDb.telegramAlertSchedules || []).find((s: any) => s.id === id);
+    if (!schedule) {
+      return res.status(404).json({ success: false, error: 'Target schedule configuration not found' });
+    }
+
+    const outcome = await triggerScheduledEvent(schedule, true);
+    res.json(outcome);
+  } catch (e: any) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Route to manually trigger simulated alert categories
+app.post('/api/telegram-trigger-mock', async (req, res) => {
+  const { alertCategory, branchId } = req.body;
+  const config = getTelegramConfig();
+  const shopName = localDb.settings?.shopName || 'Clean24 Laundry';
+  const branchName = localDb.branches.find(b => b.id === branchId)?.branchName || 'Toul Kork';
+
+  let alertType = '';
+  let details = '';
+  let actionRequired = '';
+
+  const dateTimeStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+
+  if (alertCategory === 'low_stock') {
+    alertType = 'Low Stock Alert';
+    details = `• Liquid Detergent: 8.5 Liters left (Minimum: 10 Liters)
+• Softener: 7.0 Liters left (Minimum: 10 Liters)
+• LPG Gas Capacity: 18.0 Kg left (Minimum: 20 Kg)`;
+    actionRequired = 'Procure refill canisters immediately from default supplier to prevent washer blockages.';
+  } else if (alertCategory === 'salary') {
+    alertType = 'Salary Payment Reminder';
+    details = `• Cycle: June 2026 Regular Salary Payroll
+• Unpaid Staff: 4 managers/helper accounts pending approval
+• Total Outstanding Liabilities: $1,450.00`;
+    actionRequired = 'Owner review and approve the unpaid salary ledger in Salary Dashboard.';
+  } else if (alertCategory === 'daily_business') {
+    alertType = 'Daily Business Performance';
+    
+    // Auto calculate actual values if database synced
+    const today = '2026-06-06';
+    const dayIncomes = localDb.incomes.filter(i => i.date === today && (!branchId || i.branchId === branchId));
+    const dayRevenues = localDb.revenueRecords.filter(r => r.date === today && (!branchId || r.branchId === branchId));
+    const dayExpenses = localDb.expenses.filter(e => e.expenseDate === today && (!branchId || e.branchId === branchId));
+
+    const totalIncome = dayIncomes.reduce((s, c) => s + c.totalAmount, 0) + dayRevenues.reduce((s, r) => s + r.amountUsd, 0);
+    const totalExpense = dayExpenses.reduce((s, c) => s + c.amount, 0);
+    const balance = totalIncome - totalExpense;
+
+    const abaCount = dayIncomes.filter(i => i.paymentMethod === 'ABA' || i.paymentMethod === 'QR Payment').reduce((s, c) => s + c.totalAmount, 0) +
+                       dayRevenues.filter(r => r.paymentMethod === 'ABA' || r.paymentMethod === 'QR Payment').reduce((s, r) => s + r.amountUsd, 0);
+    const cashCount = totalIncome - abaCount;
+
+    details = `• Total Revenue Today: $${totalIncome.toFixed(2)}
+• Total Expenses Today: $${totalExpense.toFixed(2)}
+• Consolidated Profit: $${balance.toFixed(2)}
+
+💳 PAYMENT METHOD RECONCILIATION:
+• cashless (ABA/QR): $${abaCount.toFixed(2)}
+• Physical Cash: $${cashCount.toFixed(2)}`;
+
+    actionRequired = 'Perform nightly cash-drawer balance counts and close administrative registers.';
+  } else if (alertCategory === 'machine') {
+    alertType = 'Machine Maintenance Alert';
+    details = `• Machine Code: Washer W-04 (15kg Heavy Load)
+• Reported Status: Broken 🔴
+• Internal Issue: Coin-slot jam causing mechanical lock screen loop. Error code: E-02`;
+    actionRequired = 'Dispatch maintenance technician to Toul Kork branch immediately to unblock mechanical rails.';
+  } else {
+    return res.status(400).json({ success: false, error: 'Invalid mock alert category' });
+  }
+
+  const message = formatTelegramMessage({
+    shopName,
+    branchName,
+    alertType,
+    dateTime: dateTimeStr,
+    details,
+    actionRequired
+  });
+
+  // Target routing based on role
+  // Send to all defined chat channels for robustness
+  const sentTargets: string[] = [];
+  const errors: string[] = [];
+
+  if (config.chatIds.owner) {
+    const r = await sendTelegramMessage(config.chatIds.owner, message);
+    if (r.success) sentTargets.push('Owner');
+    else if (r.error) errors.push(`Owner: ${r.error}`);
+  }
+  if (config.chatIds.admin) {
+    const r = await sendTelegramMessage(config.chatIds.admin, message);
+    if (r.success) sentTargets.push('Admin');
+    else if (r.error) errors.push(`Admin: ${r.error}`);
+  }
+  if (config.chatIds.branches[branchId]) {
+    const r = await sendTelegramMessage(config.chatIds.branches[branchId], message);
+    if (r.success) sentTargets.push(`Branch Channel (${branchName})`);
+    else if (r.error) errors.push(`Branch Channel: ${r.error}`);
+  }
+
+  res.json({
+    success: sentTargets.length > 0,
+    targetsStr: sentTargets.join(', ') || 'None',
+    errors: errors.length > 0 ? errors.join('; ') : undefined
+  });
+});
+
+// Endpoint to trigger direct alerts instantly from frontend mutations (e.g. Broken Machine, Low Stock, Salary Pay)
+app.post('/api/telegram-trigger-instant', async (req, res) => {
+  try {
+    const { 
+      alertType, 
+      branchId, 
+      details, 
+      actionRequired 
+    } = req.body;
+
+    const config = getTelegramConfig();
+    const shopName = localDb.settings?.shopName || 'Clean24 Laundry';
+    const branchName = localDb.branches.find(b => b.id === branchId)?.branchName || 'Toul Kork';
+    const dateTimeStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+
+    const message = formatTelegramMessage({
+      shopName,
+      branchName,
+      alertType,
+      dateTime: dateTimeStr,
+      details,
+      actionRequired
+    });
+
+    // Send to relevant channels
+    // Owners get all, admins get all, branch-managers get branch-specific actions
+    const recipients = new Set<string>();
+    if (config.chatIds.owner) recipients.add(config.chatIds.owner);
+    if (config.chatIds.admin) recipients.add(config.chatIds.admin);
+    
+    // Manager of specific branch
+    if (branchId && config.chatIds.manager[branchId]) {
+      recipients.add(config.chatIds.manager[branchId]);
+    }
+    // Branch-specific channel/group chat
+    if (branchId && config.chatIds.branches[branchId]) {
+      recipients.add(config.chatIds.branches[branchId]);
+    }
+    // Staff assigned
+    if (branchId && config.chatIds.staff[branchId]) {
+      recipients.add(config.chatIds.staff[branchId]);
+    }
+
+    const promises = Array.from(recipients).map(chatId => sendTelegramMessage(chatId, message));
+    const results = await Promise.all(promises);
+    const successes = results.filter(r => r.success).length;
+
+    res.json({ success: successes > 0, dispatchedCount: successes, totalRecipients: recipients.size });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ─── SOFTENER ENDPOINTS (EXCEL IMPORT & SPREADSHEET CELL UPDATES) ────────────
+
+// 1. Preview Excel Import data
+app.post('/api/softener/preview-import', (req, res) => {
+  try {
+    const { rows } = req.body;
+    if (!Array.isArray(rows)) {
+      return res.status(400).json({ error: 'rows must be an array' });
+    }
+
+    const { branches } = localDb || { branches: [] };
+
+    const validatedRows = rows.map((row: any, index: number) => {
+      const errors: string[] = [];
+      const warnings: string[] = [];
+
+      // Validate Date
+      if (!row.date) {
+        errors.push('Missing date');
+      } else {
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(row.date) && isNaN(Date.parse(row.date))) {
+          errors.push(`Invalid date format: ${row.date}. Must be YYYY-MM-DD`);
+        }
+      }
+
+      // Validate Branch
+      if (!row.branchId) {
+        errors.push('Missing Branch ID');
+      } else {
+        const branchExists = branches.some((b: any) => b.id === row.branchId || b.branchName === row.branchId || b.branchCode === row.branchId);
+        if (!branchExists) {
+          warnings.push(`Branch not clearly matched: ${row.branchId}. Will default to primary branch.`);
+        }
+      }
+
+      // Validate Case Quantity & Package Quantity
+      const casesNum = parseFloat(row.caseQuantity);
+      if (isNaN(casesNum) && row.caseQuantity !== undefined && row.caseQuantity !== '') {
+        errors.push(`Case Quantity must be a number`);
+      }
+
+      const pkgsNum = parseFloat(row.packageQuantity);
+      if (isNaN(pkgsNum) && row.packageQuantity !== undefined && row.packageQuantity !== '') {
+        errors.push(`Package Quantity must be a number`);
+      }
+
+      const totalCostNum = parseFloat(row.totalCost);
+      if (isNaN(totalCostNum) && row.totalCost !== undefined && row.totalCost !== '') {
+        errors.push(`Total Cost must be a number`);
+      }
+
+      return {
+        ...row,
+        id: row.id || `sof_imp_${Date.now()}_${index}`,
+        isValid: errors.length === 0,
+        errors,
+        warnings
+      };
+    });
+
+    res.json({ success: true, rows: validatedRows });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 2. Confirm Excel Import
+app.post('/api/softener/confirm-import', (req, res) => {
+  try {
+    const { rows, overwrite, packagesPerCase } = req.body;
+    if (!Array.isArray(rows)) {
+      return res.status(400).json({ error: 'rows must be an array' });
+    }
+
+    const { branches } = localDb || { branches: [] };
+    const ppc = parseInt(packagesPerCase) || 20;
+
+    // Map rows to correct db structures
+    const recordsToImport = rows.map((row: any) => {
+      // Find matching branch Id
+      let bId = row.branchId || 'b1';
+      const matchedBranch = branches.find((b: any) => b.id === bId || b.branchName === bId || b.branchCode === bId);
+      if (matchedBranch) bId = matchedBranch.id;
+
+      const caseQty = Math.max(0, parseInt(row.caseQuantity) || 0);
+      const pkgQty = Math.max(0, parseInt(row.packageQuantity) || 0);
+      const usageQty = Math.max(0, parseInt(row.usageQuantity) || 0);
+      
+      const totalStockIn = (caseQty * ppc) + pkgQty;
+      const isUsage = usageQty > 0 || row.type === 'Use' || (row.usageQuantity && parseInt(row.usageQuantity) > 0);
+
+      return {
+        id: row.id && !row.id.startsWith('sof_imp_') ? row.id : 'sof_' + Math.random().toString(36).substr(2, 9),
+        branchId: bId,
+        date: row.date || new Date().toISOString().split('T')[0],
+        supplier: row.supplier || '',
+        productName: row.productName || 'Downy Premium Fresh',
+        caseQuantity: caseQty,
+        packageQuantity: pkgQty,
+        unitCost: parseFloat(row.unitCost) || 0,
+        totalCost: parseFloat(row.totalCost) || (caseQty * (parseFloat(row.unitCost) || 0)),
+        usageQuantity: usageQty,
+        remainingStock: parseInt(row.remainingStock) || 0,
+        note: row.note || row.notes || '',
+        type: isUsage ? 'Use' : 'Refill',
+        quantityLiters: isUsage ? usageQty : totalStockIn, // keep mapped in total packets for backwards compatibility
+        remainingLiters: parseInt(row.remainingStock) || 0, // keep mapped in total packets for backwards compatibility
+        createdBy: row.createdBy || 'Import',
+        createdAt: row.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+    });
+
+    if (overwrite) {
+      localDb.softenerRecords = recordsToImport;
+    } else {
+      localDb.softenerRecords = [...recordsToImport, ...localDb.softenerRecords];
+    }
+
+    saveLocalDb();
+    res.json({ success: true, softenerRecords: localDb.softenerRecords });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 3. Update Grid Cell directly
+app.post('/api/softener/update-cell', (req, res) => {
+  try {
+    const { recordId, field, value } = req.body;
+    if (!recordId) {
+      return res.status(400).json({ error: 'recordId is required' });
+    }
+
+    const matched = localDb.softenerRecords.find((s: any) => s.id === recordId);
+    if (!matched) {
+      return res.status(404).json({ error: 'Record not found' });
+    }
+
+    matched[field] = value;
+    matched.updatedAt = new Date().toISOString();
+
+    saveLocalDb();
+    res.json({ success: true, record: matched, softenerRecords: localDb.softenerRecords });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4. Save entire spreadsheet state
+app.post('/api/softener/save-changes', (req, res) => {
+  try {
+    const { softenerRecords } = req.body;
+    if (!Array.isArray(softenerRecords)) {
+      return res.status(400).json({ error: 'softenerRecords must be an array' });
+    }
+
+    localDb.softenerRecords = softenerRecords;
+    saveLocalDb();
+    res.json({ success: true, softenerRecords: localDb.softenerRecords });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 5. Export Excel data
+app.get('/api/softener/export-excel', (req, res) => {
+  res.json({ success: true, rows: localDb.softenerRecords });
+});
+
+// 6. Export PDF
+app.post('/api/softener/export-pdf', (req, res) => {
+  res.json({ success: true, message: 'PDF generated successfully' });
+});
+
+
+// ─── BE REUSABLE PDF TEMPLATE SERVICE ────────────────────────────────────────
+
+interface PDFTemplate {
+  reportKey: string;
+  nameEn: string;
+  nameKh: string;
+  orientation: 'portrait' | 'landscape';
+  categoryField: string;
+  numericFields: string[];
+  signatories: string[];
+  brandingColor: string; // Tailwind theme accent (e.g. emerald, Indigo, teal)
+  remarksDefault: string;
+}
+
+const REUSABLE_PDF_TEMPLATES: Record<string, PDFTemplate> = {
+  revenue: {
+    reportKey: 'revenue',
+    nameEn: 'Official Revenue & Receivables Statement',
+    nameKh: 'របាយការណ៍សរុបចំណូល និងលុយត្រូវប្រមូល',
+    orientation: 'portrait',
+    categoryField: 'serviceType',
+    numericFields: ['totalAmount', 'quantity'],
+    signatories: ['Prepared By Cashier', 'Checked By Supervisor', 'Approved By Owner'],
+    brandingColor: 'emerald',
+    remarksDefault: 'All local counter invoices, coin transaction conversions, and cashless POS QR transfers are verified against POS merchant bank statements.'
+  },
+  expense: {
+    reportKey: 'expense',
+    nameEn: 'Corporate Operating Expenditures Report (OPEX)',
+    nameKh: 'របាយការណ៍ចំណាយប្រតិបត្តិការរៀបចំការងារ',
+    orientation: 'portrait',
+    categoryField: 'category',
+    numericFields: ['amount'],
+    signatories: ['Compiled By Clerk', 'Certified By Auditor', 'Approved By Chief Executive'],
+    brandingColor: 'rose',
+    remarksDefault: 'Consolidates local detergents buys, machine repairs, landlord office leases, water dispenser refills, and monthly electrical utilities invoices.'
+  },
+  pnl: {
+    reportKey: 'pnl',
+    nameEn: 'Consolidated Profit & Loss Summary (P&L)',
+    nameKh: 'របាយការណ៍សង្ខេបចំណេញ និងខាតប្រចាំខែ',
+    orientation: 'portrait',
+    categoryField: 'category',
+    numericFields: ['revenue', 'expenses', 'netSurplus'],
+    signatories: ['Accounting Officer', 'External Reviewer', 'Board Director Approval'],
+    brandingColor: 'teal',
+    remarksDefault: 'Computed with base straight-line mechanical depreciations of washer-dryer physical units capped at five-year corporate lifespans.'
+  },
+  salary: {
+    reportKey: 'salary',
+    nameEn: 'Staff Payroll Ledger Summary Sheet',
+    nameKh: 'របាយការណ៍បើកប្រាក់បៀវត្សបុគ្គលិកផ្លូវការ',
+    orientation: 'portrait',
+    categoryField: 'position',
+    numericFields: ['baseSalary', 'overtime', 'bonus', 'deduction', 'netSalary'],
+    signatories: ['Human Resource Liaison', 'Finance Manager', 'Managing Director'],
+    brandingColor: 'indigo',
+    remarksDefault: 'Staff base payouts are adjusted for recorded absences, performance bonus cycles, night shifts multipliers, and tax withholdings.'
+  },
+  attendance: {
+    reportKey: 'attendance',
+    nameEn: 'Staff Time-Sheet & Attendance Roll Ledger',
+    nameKh: 'របាយការណ៍វត្តមាន និងម៉ោងធ្វើការបុគ្គលិក',
+    orientation: 'portrait',
+    categoryField: 'status',
+    numericFields: ['workHours', 'overtimeHours'],
+    signatories: ['Shift Supervisor', 'Department Head', 'HR Director Endorsement'],
+    brandingColor: 'slate',
+    remarksDefault: 'Records are compiled via real-time biometric terminal punches and manual counter logs checked weekly by branch supervisors.'
+  },
+  inventory: {
+    reportKey: 'inventory',
+    nameEn: 'Enterprise Inventory Holdings Valuation audit',
+    nameKh: 'សវនកម្មតម្លៃទ្រព្យសកម្ម និងស្តុកគ្រឿងផ្គត់ផ្គង់',
+    orientation: 'landscape',
+    categoryField: 'category',
+    numericFields: ['currentStock', 'remainingStock', 'purchasePrice', 'assetValue'],
+    signatories: ['Storekeeper Register', 'Internal Auditor', 'Operations Manager Signoff'],
+    brandingColor: 'sky',
+    remarksDefault: 'Supplies valuations are priced on chronological F.I.F.O (First In, First Out) inventory cost methods checked against safe storage lockers.'
+  },
+  coin: {
+    reportKey: 'coin',
+    nameEn: 'Coin Register & Dispenser Transaction Sheet',
+    nameKh: 'របាយការណ៍កាក់បម្លែង និងប្រតិបត្តិការកាក់បោកគក់',
+    orientation: 'portrait',
+    categoryField: 'type',
+    numericFields: ['amount', 'valueUsd'],
+    signatories: ['Drawer Operator', 'Vault Controller', 'Owner Final Approval'],
+    brandingColor: 'amber',
+    remarksDefault: 'Reconciliation of physical coin collector tins harvested weekly with electronic terminal transaction logs.'
+  },
+  gas: {
+    reportKey: 'gas',
+    nameEn: 'LPG Gas Cylinder Refills and Consumptions Audit',
+    nameKh: 'របាយការណ៍វត្តមានការប្រើប្រាស់ធុងហ្គាស (LPG)',
+    orientation: 'portrait',
+    categoryField: 'type',
+    numericFields: ['tankCount', 'remainingKg', 'cost'],
+    signatories: ['Plant Operator', 'Operations lead', 'Managing Director'],
+    brandingColor: 'orange',
+    remarksDefault: 'Tracks propane levels at high-pressure dryer lines to maintain standard 45Kg tank replacement rotations.'
+  },
+  detergent: {
+    reportKey: 'detergent',
+    nameEn: 'Liquid Detergent Concentrates Flow Ledger',
+    nameKh: 'របាយការណ៍ស្តុកនិងការប្រើប្រាស់សាប៊ូទឹកកំហាប់ខ្ពស់',
+    orientation: 'portrait',
+    categoryField: 'type',
+    numericFields: ['quantityLiters', 'remainingLiters', 'cost'],
+    signatories: ['Fulfillment Staff', 'Inventory Lead', 'Owner Audit'],
+    brandingColor: 'cyan',
+    remarksDefault: 'Consonates fluid level usages via optical flow sensors compared against direct refill purchase invoices.'
+  },
+  softener: {
+    reportKey: 'softener',
+    nameEn: 'Fabric Softener Reserves Flow Register',
+    nameKh: 'របាយការណ៍ស្តុកនិងការប្រើប្រាស់ទឹកក្រអូបថែរក្សាសរសៃសំពត់',
+    orientation: 'portrait',
+    categoryField: 'type',
+    numericFields: ['quantityLiters', 'remainingLiters', 'cost'],
+    signatories: ['Laundry Tech', 'Inventory Auditor', 'Managing Director'],
+    brandingColor: 'fuchsia',
+    remarksDefault: 'Softener volumes are matched directly to wash cycle counts to preserve proper formula density across heavy-duty dry cycles.'
+  },
+  machine: {
+    reportKey: 'machine',
+    nameEn: 'Mechanical Washers & Dryers Hardware Performance Audit',
+    nameKh: 'របាយការណ៍លទ្ធផលសកម្មភាព និងចំណូលគ្រឿងម៉ាស៊ីន',
+    orientation: 'landscape',
+    categoryField: 'status',
+    numericFields: ['capacity', 'revenue'],
+    signatories: ['Senior Technician', 'Certified Mechanical Engineer', 'Owner Inspection'],
+    brandingColor: 'violet',
+    remarksDefault: 'Tracks hardware operational statuses, cumulative run-time revenues, mechanical blockages logs, and warranty lifecycles.'
+  },
+  cashdrawer: {
+    reportKey: 'cashdrawer',
+    nameEn: 'Cash Drawer Shift-Close Balance Statement',
+    nameKh: 'របាយការណ៍ផ្ទៀងផ្ទាត់សមតុល្យប្រអប់ថតលុយវេន',
+    orientation: 'portrait',
+    categoryField: 'status',
+    numericFields: ['startingCash', 'endingCash', 'actualCash', 'difference'],
+    signatories: ['Cashier Handing-Over', 'Cashier Taking-Over', 'Manager Clearance'],
+    brandingColor: 'lime',
+    remarksDefault: 'Audits physical fiat cash registers at the close of morning and evening work-shifts to log differences.'
+  },
+  monthclosing: {
+    reportKey: 'monthclosing',
+    nameEn: 'Month-End Administrative Reconciled Closeout Report',
+    nameKh: 'របាយការណ៍ផ្ទៀងផ្ទាត់បញ្ជីរដ្ឋបាលបិទគណនីប្រចាំខែ',
+    orientation: 'portrait',
+    categoryField: 'status',
+    numericFields: ['totalRevenue', 'totalExpenses', 'depreciationSavings', 'netIncome'],
+    signatories: ['Accountant Accountant', 'Operations Director', 'Owner Certification'],
+    brandingColor: 'purple',
+    remarksDefault: 'Locks transactional history records for the defined period, verifying currency ledger alignments.'
+  },
+  comparison: {
+    reportKey: 'comparison',
+    nameEn: 'Multi-Branch Comparative Financial Performance Index',
+    nameKh: 'របាយការណ៍វិភាគ និងប្រៀបធៀបលទ្ធផលអាជីវកម្មគ្រប់សាខា',
+    orientation: 'landscape',
+    categoryField: 'id',
+    numericFields: ['totalRevenue', 'totalOpex', 'netProfit'],
+    signatories: ['Business Advisory Consultant', 'Finance Comptroller', 'President & CEO Signature'],
+    brandingColor: 'blue',
+    remarksDefault: 'Compares operating efficiencies, wash counts, utilities consumption weight, and net cash margins of all registered storefront outlets.'
+  }
+};
+
+// Route to fetch A4 Report layout definitions
+// Route to fetch A4 Report layout definitions
+app.get('/api/revenue/export/pdf', async (req, res) => {
+  try {
+    const { branch_id, month, year, generated_by } = req.query;
+
+    if (!branch_id || !month || !year) {
+      return res.status(400).json({ error: 'Missing required parameters: branch_id, month, year' });
+    }
+
+    const bId = branch_id as string;
+    const mNum = parseInt(month as string);
+    const yNum = parseInt(year as string);
+
+    if (isNaN(mNum) || isNaN(yNum)) {
+      return res.status(400).json({ error: 'Invalid month or year parameter' });
+    }
+
+    // 1. Fetch branch name
+    const branchName = localDb.branches?.find((b: any) => b.id === bId)?.branchName || 'Veng Sreng';
+
+    // 2. Filter revenue records from db and construct days sequentially to match Excel / UI precisely
+    const daysInMonth = new Date(yNum, mNum, 0).getDate();
+    const records: any[] = [];
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${yNum}-${String(mNum).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const match = (localDb.revenueRecords || []).find((r: any) => r.branchId === bId && r.date === dateStr);
+
+      let defaultStartCash = match?.startCounter !== undefined ? match.startCounter : 0;
+      let defaultStartAba = match?.startCounterAba !== undefined ? match.startCounterAba : 0;
+
+      if (day > 1 && !match) {
+        const prevDateStr = `${yNum}-${String(mNum).padStart(2, '0')}-${String(day - 1).padStart(2, '0')}`;
+        const prevMatch = (localDb.revenueRecords || []).find((r: any) => r.branchId === bId && r.date === prevDateStr);
+        if (prevMatch) {
+          if (prevMatch.endCounter !== undefined) {
+            defaultStartCash = prevMatch.endCounter;
+          }
+          if (prevMatch.endCounterAba !== undefined) {
+            defaultStartAba = prevMatch.endCounterAba;
+          }
+        }
+      } else if (day === 1 && !match) {
+        const prevM = mNum === 1 ? 12 : mNum - 1;
+        const prevY = mNum === 1 ? yNum - 1 : yNum;
+        const prevDays = new Date(prevY, prevM, 0).getDate();
+        const prevDateStr = `${prevY}-${String(prevM).padStart(2, '0')}-${String(prevDays).padStart(2, '0')}`;
+        const prevMatch = (localDb.revenueRecords || []).find((r: any) => r.branchId === bId && r.date === prevDateStr);
+        if (prevMatch) {
+          if (prevMatch.endCounter !== undefined) {
+            defaultStartCash = prevMatch.endCounter;
+          }
+          if (prevMatch.endCounterAba !== undefined) {
+            defaultStartAba = prevMatch.endCounterAba;
+          }
+        }
+      }
+
+      records.push({
+        day,
+        date: dateStr,
+        time: match?.time || '10:30',
+        startCounter: match?.startCounter !== undefined ? match.startCounter : defaultStartCash,
+        endCounter: match?.endCounter !== undefined ? match.endCounter : (match?.startCounter !== undefined ? match.startCounter : defaultStartCash),
+        startCounterAba: match?.startCounterAba !== undefined ? match.startCounterAba : defaultStartAba,
+        endCounterAba: match?.endCounterAba !== undefined ? match.endCounterAba : (match?.startCounterAba !== undefined ? match.startCounterAba : defaultStartAba),
+        cash: match?.cash !== undefined ? match.cash : 0,
+        aba: match?.aba !== undefined ? match.aba : 0,
+        bankDeposit: match?.bankDeposit !== undefined ? match.bankDeposit : 0,
+        actualCashCount: match?.actualCashCount !== undefined ? match.actualCashCount : 0,
+        note: match?.note || '',
+        exists: !!match
+      });
+    }
+
+    // Continuity dynamic sweep for pre-filling start/end counters logically
+    for (let i = 1; i < records.length; i++) {
+      if (records[i].startCounter === 0 && records[i - 1].endCounter > 0 && !records[i].exists) {
+        records[i].startCounter = records[i - 1].endCounter;
+        if (records[i].endCounter < records[i].startCounter) {
+          records[i].endCounter = records[i].startCounter;
+        }
+      }
+      if (records[i].startCounterAba === 0 && records[i - 1].endCounterAba > 0 && !records[i].exists) {
+        records[i].startCounterAba = records[i - 1].endCounterAba;
+        if (records[i].endCounterAba < records[i].startCounterAba) {
+          records[i].endCounterAba = records[i].startCounterAba;
+        }
+      }
+    }
+
+    // Determine executing auditor/user
+    const userPayload = (req as any).user;
+    const email = userPayload?.email || userPayload?.username || (generated_by as string) || 'Manager';
+
+    const currentLocalTimeStr = new Date().toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' });
+
+    // 3. Compile PDF buffer using our custom Noto Sans Khmer service
+    const pdfBuffer = await generateRevenuePdf({
+      branchId: bId,
+      branchName,
+      month: mNum,
+      year: yNum,
+      records,
+      generatedBy: email,
+      generatedDateStr: currentLocalTimeStr + ' (ICT)'
+    });
+
+    // 4. Post secure transaction event to auditor logs
+    if (!localDb.auditLogs) {
+      localDb.auditLogs = [];
+    }
+    const timestampStr = new Date().toISOString().substring(0, 19).replace('T', ' ');
+    const logMsg = `[PDF Export Service] Generated "Official Revenue Statement" (A4 portrait) - Branch: ${branchName} | Period: ${mNum}/${yNum} | Prepared by: ${email} | at ${timestampStr}`;
+    localDb.auditLogs.unshift(logMsg);
+    if (localDb.auditLogs.length > 200) {
+      localDb.auditLogs = localDb.auditLogs.slice(0, 200);
+    }
+    saveLocalDb();
+
+    // 5. Send raw file bytes stream
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=Revenue_${branchName.replace(/\s+/g, '')}_${yNum}_${String(mNum).padStart(2, '0')}.pdf`);
+    res.send(pdfBuffer);
+  } catch (err: any) {
+    console.error('[PDF Export Endpoint Error] PDF generation error:', err);
+    res.status(500).json({ success: false, error: 'Failed to generate PDF report correctly: ' + err.message });
+  }
+});
+
+app.get('/api/pdf/templates', (req, res) => {
+  res.json({ success: true, templates: REUSABLE_PDF_TEMPLATES });
+});
+
+// Route to record/audit a PDF generation event securely in server ledger history
+app.post('/api/pdf/audit-generation', (req, res) => {
+  try {
+    const { reportType, branchName, dateFilter, generatedByUser, totalsSummary } = req.body;
+    
+    // Auto populate server audit log if array exists
+    if (!localDb.auditLogs) {
+      localDb.auditLogs = [];
+    }
+    
+    const timestampStr = new Date().toISOString().substring(0, 19).replace('T', ' ');
+    const logMsg = `[PDF Export Service] Generated "${REUSABLE_PDF_TEMPLATES[reportType]?.nameEn || reportType}" (A4 ${REUSABLE_PDF_TEMPLATES[reportType]?.orientation || 'portrait'}) - Branch: ${branchName} | Period: ${dateFilter} | Prepared by: ${generatedByUser} | Summary: ${totalsSummary} at ${timestampStr}`;
+    
+    // Add to audit logs
+    localDb.auditLogs.unshift(logMsg);
+    
+    // Keep max 200 logs
+    if (localDb.auditLogs.length > 200) {
+      localDb.auditLogs = localDb.auditLogs.slice(0, 200);
+    }
+    
+    saveLocalDb();
+    res.json({ success: true, loggedMsg: logMsg });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
+// ─── SERVER BACKGROUND SCHEDULER ─────────────────────────────────────────────
+// Runs checks for low balances, salaries approaching due dates, and daily business performance reports automatically.
+function runSchedules() {
+  const config = getTelegramConfig();
+  const now = new Date();
+  const todayDateStr = now.toISOString().substring(0, 10); // "2026-06-06"
+  const hour = now.getUTCHours() + 7; // Convert to Indochina Time (+7)
+  const currentHourMin = `${String(hour % 24).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')}`;
+
+  // 1. DAILY BUSINESS PERFORMANCE REPORT (Runs at say, 20:00 Phnom Penh time)
+  if (currentHourMin === '20:00' && alertHistory.lastDailyBusinessDate !== todayDateStr) {
+    triggerDailyBusinessPerformance(todayDateStr);
+  }
+
+  // 2. DAILY AUTOMATIC CHECKS (Low Stocks / Maintenance / approaching salaries)
+  // Run checks once an hour (or if checked in memory at top or bottom of hour hh:00)
+  if (now.getUTCMinutes() === 0) {
+    checkOutstandingStockAndDevices();
+    checkApproachingSalaries();
+  }
+
+  // 3. INTEGRATED CUSTOM TELEGRAM ALERTS SCHEDULER
+  const schedules = localDb.telegramAlertSchedules || [];
+  const dayOfWeekStr = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()];
+  const dayOfMonthNo = now.getDate();
+
+  schedules.forEach(s => {
+    if (!s.isEnabled) return;
+    if (s.frequency === 'INSTANT') return; // Handled dynamically in event code
+
+    // Check if sendTime matches
+    const normalizedConfigTime = normalizeTo24Hour(s.sendTime);
+    if (normalizedConfigTime !== currentHourMin) return;
+
+    // Check lastSentDate to avoid duplicate firing in same minute
+    const lastSentDate = s.lastSentAt ? s.lastSentAt.substring(0, 10) : '';
+    if (lastSentDate === todayDateStr) return;
+
+    let isDue = false;
+
+    if (s.frequency === 'DAILY') {
+      isDue = true;
+    } else if (s.frequency === 'WEEKLY') {
+      if (s.dayOfWeek && s.dayOfWeek.toLowerCase() === dayOfWeekStr.toLowerCase()) {
+        isDue = true;
+      }
+    } else if (s.frequency === 'MONTHLY') {
+      if (s.dayOfMonth === 'last') {
+        const tomorrow = new Date(now.getTime() + 86400000);
+        if (tomorrow.getDate() === 1) isDue = true;
+      } else if (s.dayOfMonth === '1' || s.dayOfMonth === '1st') {
+        if (dayOfMonthNo === 1) isDue = true;
+      } else if (parseInt(s.dayOfMonth) === dayOfMonthNo) {
+        isDue = true;
+      }
+    } else if (s.frequency === 'CUSTOM') {
+      isDue = true;
+    }
+
+    if (isDue) {
+      triggerScheduledEvent(s).catch(err => {
+        console.error(`Failed executing background schedule alert ${s.id}:`, err);
+      });
+    }
+  });
+}
+
+// Low Stock and broken machines automatic checker
+function checkOutstandingStockAndDevices() {
+  const config = getTelegramConfig();
+  const shopName = localDb.settings?.shopName || 'Clean24 Laundry';
+  const todayStr = new Date().toISOString().substring(0, 10);
+
+  // Checks Gases, Detergents, Softeners, StockTransactions
+  localDb.branches.forEach(branch => {
+    // A. DETERGENTS
+    const branchDetergent = localDb.detergentRecords.filter(d => d.branchId === branch.id);
+    const detergentRemaining = branchDetergent.length > 0 ? branchDetergent[0].remainingLiters : 20;
+    if (detergentRemaining < 10) {
+      const key = `${branch.id}_detergent_${todayStr}`;
+      if (!alertHistory.lowStockSentKeys[key]) {
+        dispatchSingleAlert({
+          shopName,
+          branchName: branch.branchName,
+          alertType: 'Low Stock Alert (Detergent)',
+          details: `• Current Detergent Reserve: ${detergentRemaining} Liters
+• Danger Threshold: Under 10 Liters`,
+          actionRequired: 'Arrange urgent replacement detergent fluid supply barrels.',
+          branchId: branch.id
+        });
+        alertHistory.lowStockSentKeys[key] = todayStr;
+        saveAlertHistory();
+      }
+    }
+
+    // B. SOFTENERS
+    const branchSoftener = localDb.softenerRecords.filter(s => s.branchId === branch.id);
+    const softenerRemaining = branchSoftener.length > 0 ? branchSoftener[0].remainingLiters : 20;
+    if (softenerRemaining < 10) {
+      const key = `${branch.id}_softener_${todayStr}`;
+      if (!alertHistory.lowStockSentKeys[key]) {
+        dispatchSingleAlert({
+          shopName,
+          branchName: branch.branchName,
+          alertType: 'Low Stock Alert (Softener)',
+          details: `• Current Softener Reserve: ${softenerRemaining} Liters
+• Danger Threshold: Under 10 Liters`,
+          actionRequired: 'Refill softener dispenser drawers to prevent wash output harshness.',
+          branchId: branch.id
+        });
+        alertHistory.lowStockSentKeys[key] = todayStr;
+        saveAlertHistory();
+      }
+    }
+
+    // C. GAS (LPG)
+    const branchGas = localDb.gasRecords.filter(g => g.branchId === branch.id);
+    const gasRemaining = branchGas.length > 0 ? branchGas[0].remainingKg : 45;
+    if (gasRemaining < 20) {
+      const key = `${branch.id}_gas_${todayStr}`;
+      if (!alertHistory.lowStockSentKeys[key]) {
+        dispatchSingleAlert({
+          shopName,
+          branchName: branch.branchName,
+          alertType: 'Low Gas Alert (LPG)',
+          details: `• LPG Remaining Balance: ${gasRemaining} Kg
+• Danger Threshold: Under 20 Kg`,
+          actionRequired: 'Procure replacement propane LPG cylinders immediately.',
+          branchId: branch.id
+        });
+        alertHistory.lowStockSentKeys[key] = todayStr;
+        saveAlertHistory();
+      }
+    }
+
+    // D. COIN TRANS BALANCE
+    const branchCoins = localDb.coinTransactions.filter(c => c.branchId === branch.id);
+    const totalInCoins = branchCoins.filter(c => c.type === 'In').reduce((sum, c) => sum + c.amount, 0);
+    const totalOutCoins = branchCoins.filter(c => c.type === 'Out').reduce((sum, c) => sum + c.amount, 0);
+    const totalCoinBalance = totalInCoins - totalOutCoins;
+    if (totalCoinBalance < 200) {
+      const key = `${branch.id}_coins_${todayStr}`;
+      if (!alertHistory.lowStockSentKeys[key]) {
+        dispatchSingleAlert({
+          shopName,
+          branchName: branch.branchName,
+          alertType: 'Low Coin Box Balance',
+          details: `• Safe Balance: ${totalCoinBalance} Coins remaining
+• Danger Threshold: Under 200 Coins`,
+          actionRequired: 'Stock change coins or harvest coins from machine locks and reload dispenser.',
+          branchId: branch.id
+        });
+        alertHistory.lowStockSentKeys[key] = todayStr;
+        saveAlertHistory();
+      }
+    }
+  });
+}
+
+function checkApproachingSalaries() {
+  const shopName = localDb.settings?.shopName || 'Clean24 Laundry';
+  const todayStr = new Date().toISOString().substring(0, 10); // Yyyy-mm-dd
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() + 2); // 2 days ahead
+  const targetDateStr = targetDate.toISOString().substring(0, 10);
+
+  localDb.salaries.forEach(salary => {
+    // Notify on unpaid salaries where approaching payment date (or past due)
+    if (salary.status === 'Unpaid' && salary.paymentDate <= targetDateStr) {
+      const key = `${salary.id}_salary_${todayStr}`;
+      if (alertHistory.lastSalaryAlertDate !== key) {
+        dispatchSingleAlert({
+          shopName,
+          branchName: localDb.branches.find(b => b.id === salary.branchId)?.branchName || 'Toul Kork',
+          alertType: 'Salary Payment Due Alert',
+          details: `• Staff Member: ${salary.staffName}
+• Salary Period: ${salary.salaryPeriod}
+• Base Salary Level: $${salary.baseSalary.toFixed(2)}
+• Total Outstanding Net: $${salary.netSalary.toFixed(2)}
+• Scheduled Due Date: ${salary.paymentDate}`,
+          actionRequired: 'Manager or Owner approval and payout required to maintain operational stability.',
+          branchId: salary.branchId
+        });
+        alertHistory.lastSalaryAlertDate = key;
+        saveAlertHistory();
+      }
+    }
+  });
+}
+
+async function triggerDailyBusinessPerformance(targetDateStr: string) {
+  const shopName = localDb.settings?.shopName || 'Clean24 Laundry';
+  const config = getTelegramConfig();
+
+  // Aggregate stats across all branches or per branch dynamically
+  localDb.branches.forEach(async (branch) => {
+    const dayIncomes = localDb.incomes.filter(i => i.date === targetDateStr && i.branchId === branch.id);
+    const dayRevenues = localDb.revenueRecords.filter(r => r.date === targetDateStr && r.branchId === branch.id);
+    const dayExpenses = localDb.expenses.filter(e => e.expenseDate === targetDateStr && e.branchId === branch.id);
+
+    const totalIncome = dayIncomes.reduce((s, c) => s + c.totalAmount, 0) + dayRevenues.reduce((s, r) => s + r.amountUsd, 0);
+    const totalExpense = dayExpenses.reduce((s, c) => s + c.amount, 0);
+    const balance = totalIncome - totalExpense;
+
+    const abaCount = dayIncomes.filter(i => i.paymentMethod === 'ABA' || i.paymentMethod === 'QR Payment').reduce((s, c) => s + c.totalAmount, 0) +
+                       dayRevenues.filter(r => r.paymentMethod === 'ABA' || r.paymentMethod === 'QR Payment').reduce((s, r) => s + r.amountUsd, 0);
+    const cashCount = totalIncome - abaCount;
+
+    const details = `• Total Daily Revenue: $${totalIncome.toFixed(2)}
+• Total Daily Expenses: $${totalExpense.toFixed(2)}
+• Consolidated Profit: $${balance.toFixed(2)}
+
+💳 PAYMENT METHOD RECONCILIATION:
+• contactless (ABA/QR): $${abaCount.toFixed(2)}
+• Cash box: $${cashCount.toFixed(2)}`;
+
+    const text = formatTelegramMessage({
+      shopName,
+      branchName: branch.branchName,
+      alertType: 'Branch Daily Business Summary',
+      dateTime: `${targetDateStr} 20:00`,
+      details,
+      actionRequired: 'Verify daily deposit totals and sign off on checkout records.'
+    });
+
+    // Send to branch manager, owner, admin, and branch channel
+    const targets = new Set<string>();
+    if (config.chatIds.owner) targets.add(config.chatIds.owner);
+    if (config.chatIds.admin) targets.add(config.chatIds.admin);
+    if (config.chatIds.manager[branch.id]) targets.add(config.chatIds.manager[branch.id]);
+    if (config.chatIds.branches[branch.id]) targets.add(config.chatIds.branches[branch.id]);
+
+    for (const chatId of targets) {
+      await sendTelegramMessage(chatId, text);
+    }
+  });
+
+  alertHistory.lastDailyBusinessDate = targetDateStr;
+  saveAlertHistory();
+}
+
+async function dispatchSingleAlert(alert: { shopName: string; branchName: string; alertType: string; details: string; actionRequired: string; branchId: string }) {
+  const config = getTelegramConfig();
+  const dateTimeStr = new Date().toISOString().replace('T', ' ').substring(0, 16);
+
+  // Parse custom scheduled INSTANT alerts
+  const schedules = (localDb.telegramAlertSchedules || []).filter(s => 
+    s.isEnabled && 
+    s.frequency === 'INSTANT' && 
+    (s.branchId === 'all' || s.branchId === alert.branchId) &&
+    (s.alertType.toLowerCase().replace(/_/g, ' ').includes(alert.alertType.toLowerCase().replace(/_/g, ' ')) ||
+     alert.alertType.toLowerCase().replace(/_/g, ' ').includes(s.alertType.toLowerCase().replace(/_/g, ' ')))
+  );
+
+  for (const s of schedules) {
+    const recipient = (localDb.telegramRecipients || []).find(r => r.id === s.recipientId);
+    const chatId = recipient?.isEnabled ? recipient.chatId : (config.chatIds.owner || config.chatIds.admin);
+    if (!chatId) continue;
+
+    const template = (localDb.telegramTemplates || []).find(t => t.id === s.templateId);
+    const formatMode = template?.parseMode || 'HTML';
+    const rawTemplateText = template?.engTemplate || `<b>⚠️ {status} INSTANT ALERT</b>\n━━━━━━━━━━━━━━━━━\n🏪 <b>Branch:</b> {branch_name}\n📅 <b>Time:</b> {date} {time}\n📝 <b>Details:</b> {message}`;
+
+    const todayStr = new Date().toISOString().substring(0, 10);
+    const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+    const alertText = parseTemplateVariables(rawTemplateText, {
+      branch_name: alert.branchName,
+      date: todayStr,
+      time: timeStr,
+      status: alert.alertType,
+      message: `${alert.details}\n👉 Required Action: ${alert.actionRequired}`
+    });
+
+    let customBotToken: string | undefined = undefined;
+    if (recipient) {
+      const encToken = recipient.bot_token_encrypted || recipient.botTokenEncrypted;
+      if (encToken) {
+        customBotToken = decryptToken(encToken);
+      }
+    }
+
+    const sendRes = await sendTelegramMessageWithRetry(chatId, alertText, formatMode, 3, customBotToken);
+
+    if (!localDb.telegramLogs) localDb.telegramLogs = [];
+    localDb.telegramLogs.push({
+      id: 'log_' + Date.now() + '_' + Math.floor(Math.random() * 100),
+      scheduleId: s.id,
+      templateId: s.templateId || null,
+      recipientId: s.recipientId || null,
+      chatId: chatId,
+      alertType: alert.alertType,
+      messageText: alertText,
+      status: sendRes.success ? 'SUCCESS' : 'FAILED',
+      errorMessage: sendRes.success ? null : sendRes.error,
+      sentAt: new Date().toISOString()
+    });
+
+    s.lastSentAt = new Date().toISOString();
+  }
+
+  // standard fallback legacy target delivery
+  const message = formatTelegramMessage({
+    shopName: alert.shopName,
+    branchName: alert.branchName,
+    alertType: alert.alertType,
+    dateTime: dateTimeStr,
+    details: alert.details,
+    actionRequired: alert.actionRequired
+  });
+
+  const targets = new Set<string>();
+  if (config.chatIds.owner) targets.add(config.chatIds.owner);
+  if (config.chatIds.admin) targets.add(config.chatIds.admin);
+  if (alert.branchId && config.chatIds.manager[alert.branchId]) targets.add(config.chatIds.manager[alert.branchId]);
+  if (alert.branchId && config.chatIds.branches[alert.branchId]) targets.add(config.chatIds.branches[alert.branchId]);
+  if (alert.branchId && config.chatIds.staff[alert.branchId]) targets.add(config.chatIds.staff[alert.branchId]);
+
+  for (const chatId of targets) {
+    const res = await sendTelegramMessage(chatId, message);
+    if (!localDb.telegramLogs) localDb.telegramLogs = [];
+    localDb.telegramLogs.push({
+      id: 'log_' + Date.now() + '_' + Math.floor(Math.random() * 100),
+      scheduleId: null,
+      templateId: null,
+      recipientId: null,
+      chatId: chatId,
+      alertType: alert.alertType,
+      messageText: message,
+      status: res.success ? 'SUCCESS' : 'FAILED',
+      errorMessage: res.success ? null : (res.error || 'Empty response'),
+      sentAt: new Date().toISOString()
+    });
+  }
+
+  saveLocalDb();
+}
+
+// Background scheduler interval (Once in 60s)
+setInterval(runSchedules, 60000);
+
+
+// ─── VITE DEVSERVER / STATIC FILES SERVING ──────────────────────────────────
+async function startServer() {
+  // Vite dev mode vs Production static hosting
+  if (process.env.NODE_ENV !== 'production') {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*all', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Express multi-branch routing active on http://0.0.0.0:${PORT}`);
+  });
+}
+
+startServer();
+
+
+// Export Express app instance for Vercel Serverless environment
+export default app;

@@ -1,0 +1,14 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+server-db.json
+alert-history.json
+*.zip
+*.tar.gz
+temp_unzip/
+.agents/
