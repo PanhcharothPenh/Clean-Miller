@@ -55,6 +55,25 @@ const PORT = 3000;
 
 app.use(cors());
 
+let isDbPulled = false;
+
+// Request-level Supabase database pull middleware
+app.use(async (req, res, next) => {
+  // Only intercept API and auth paths to keep frontend assets load lightning fast
+  const isApi = req.path.startsWith('/api') || req.path.startsWith('/auth');
+  if (supabase && !isDbPulled && isApi) {
+    try {
+      console.log('[Clean24 Server] Request context activated. Awaiting Supabase database pull...');
+      await pullCollectionsFromSupabase();
+      isDbPulled = true;
+      console.log('[Clean24 Server] Supabase database pull completed successfully!');
+    } catch (err) {
+      console.error('[Clean24 Server] Supabase database pull failed:', err.message || err);
+    }
+  }
+  next();
+});
+
 // Intercept Express response lifecycle to await pending Supabase pushes before freezing the container
 app.use((req, res, next) => {
   pendingSupabasePushes = [];

@@ -462,6 +462,21 @@ var import_supabase_js = require("@supabase/supabase-js");
 var app = (0, import_express.default)();
 var PORT = 3e3;
 app.use((0, import_cors.default)());
+var isDbPulled = false;
+app.use(async (req, res, next) => {
+  const isApi = req.path.startsWith("/api") || req.path.startsWith("/auth");
+  if (supabase && !isDbPulled && isApi) {
+    try {
+      console.log("[Clean24 Server] Request context activated. Awaiting Supabase database pull...");
+      await pullCollectionsFromSupabase();
+      isDbPulled = true;
+      console.log("[Clean24 Server] Supabase database pull completed successfully!");
+    } catch (err) {
+      console.error("[Clean24 Server] Supabase database pull failed:", err.message || err);
+    }
+  }
+  next();
+});
 app.use((req, res, next) => {
   pendingSupabasePushes = [];
   const originalSend = res.send;
