@@ -51,7 +51,19 @@ interface SyncPayload {
 }
 
 const app = express();
+app.set('trust proxy', true);
 const PORT = 3000;
+
+// Helper to resolve client public IP behind reverse proxies (like Vercel)
+function getClientIp(req: any): string {
+  const xRealIp = req.headers['x-real-ip'];
+  const xForwardedFor = req.headers['x-forwarded-for'];
+  if (xRealIp) return xRealIp;
+  if (xForwardedFor) {
+    return xForwardedFor.split(',')[0].trim();
+  }
+  return getClientIp(req);
+}
 
 app.use(cors());
 
@@ -998,7 +1010,7 @@ app.get(['/auth/telegram/callback', '/auth/telegram/callback/'], async (req, res
     userId: user.id,
     username: user.username,
     timestamp: new Date().toISOString(),
-    ipAddress: req.ip || '127.0.0.1',
+    ipAddress: getClientIp(req),
     device: req.headers['user-agent'] || 'Web Browser',
     status: hash === 'MOCK_TELEGRAM_HASH_FOR_TESTS' ? 'Success (Simulated Telegram)' : 'Success (Telegram)'
   });
@@ -1143,7 +1155,7 @@ app.post('/api/auth/telegram/webapp-validate', async (req, res) => {
       userId: user.id,
       username: user.username,
       timestamp: new Date().toISOString(),
-      ipAddress: req.ip || '127.0.0.1',
+      ipAddress: getClientIp(req),
       device: req.headers['user-agent'] || 'Web Browser',
       status: 'Success (Simulated WebApp)'
     });
@@ -1269,7 +1281,7 @@ app.post('/api/auth/telegram/webapp-validate', async (req, res) => {
     userId: user.id,
     username: user.username,
     timestamp: new Date().toISOString(),
-    ipAddress: req.ip || '127.0.0.1',
+    ipAddress: getClientIp(req),
     device: req.headers['user-agent'] || 'Web Browser',
     status: 'Success (Telegram WebApp)'
   });
@@ -1345,7 +1357,7 @@ app.post('/api/auth/telegram/request-approval', async (req, res) => {
     userId: user ? user.id : 'unknown',
     username: username,
     timestamp: new Date().toISOString(),
-    ipAddress: req.ip || '127.0.0.1',
+    ipAddress: getClientIp(req),
     device: req.headers['user-agent'] || 'Web Browser',
     status: 'Approval Request Dispatched'
   });
@@ -1465,7 +1477,7 @@ ${details}
 
 app.post('/api/auth/login', (req, res) => {
   const { usernameOrEmail, password } = req.body;
-  const ipAddress = req.ip || '127.0.0.1';
+  const ipAddress = getClientIp(req);
   const device = req.headers['user-agent'] || 'Web Browser';
 
   if (!usernameOrEmail || !password) {

@@ -460,7 +460,17 @@ async function generateRevenuePdf({
 // server.ts
 var import_supabase_js = require("@supabase/supabase-js");
 var app = (0, import_express.default)();
+app.set("trust proxy", true);
 var PORT = 3e3;
+function getClientIp(req) {
+  const xRealIp = req.headers["x-real-ip"];
+  const xForwardedFor = req.headers["x-forwarded-for"];
+  if (xRealIp) return xRealIp;
+  if (xForwardedFor) {
+    return xForwardedFor.split(",")[0].trim();
+  }
+  return getClientIp(req);
+}
 app.use((0, import_cors.default)());
 var isDbPulled = false;
 app.use(async (req, res, next) => {
@@ -1333,7 +1343,7 @@ app.get(["/auth/telegram/callback", "/auth/telegram/callback/"], async (req, res
     userId: user.id,
     username: user.username,
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-    ipAddress: req.ip || "127.0.0.1",
+    ipAddress: getClientIp(req),
     device: req.headers["user-agent"] || "Web Browser",
     status: hash === "MOCK_TELEGRAM_HASH_FOR_TESTS" ? "Success (Simulated Telegram)" : "Success (Telegram)"
   });
@@ -1456,7 +1466,7 @@ app.post("/api/auth/telegram/webapp-validate", async (req, res) => {
       userId: user2.id,
       username: user2.username,
       timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-      ipAddress: req.ip || "127.0.0.1",
+      ipAddress: getClientIp(req),
       device: req.headers["user-agent"] || "Web Browser",
       status: "Success (Simulated WebApp)"
     });
@@ -1564,7 +1574,7 @@ app.post("/api/auth/telegram/webapp-validate", async (req, res) => {
     userId: user.id,
     username: user.username,
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-    ipAddress: req.ip || "127.0.0.1",
+    ipAddress: getClientIp(req),
     device: req.headers["user-agent"] || "Web Browser",
     status: "Success (Telegram WebApp)"
   });
@@ -1626,7 +1636,7 @@ app.post("/api/auth/telegram/request-approval", async (req, res) => {
     userId: user ? user.id : "unknown",
     username,
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-    ipAddress: req.ip || "127.0.0.1",
+    ipAddress: getClientIp(req),
     device: req.headers["user-agent"] || "Web Browser",
     status: "Approval Request Dispatched"
   });
@@ -1728,7 +1738,7 @@ ${details}
 }
 app.post("/api/auth/login", (req, res) => {
   const { usernameOrEmail, password } = req.body;
-  const ipAddress = req.ip || "127.0.0.1";
+  const ipAddress = getClientIp(req);
   const device = req.headers["user-agent"] || "Web Browser";
   if (!usernameOrEmail || !password) {
     return res.status(400).json({ error: "Username or email and password are required" });
