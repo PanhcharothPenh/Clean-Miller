@@ -613,7 +613,7 @@ function seedUsersAndRoles() {
         id: 'usr_owner',
         role: 'Owner',
         username: 'owner',
-        email: 'owner@clean24.local',
+        email: 'owner@clean24.com',
         fullName: 'Executive Owner',
         phone: '012 111 222',
         passwordHash: bcrypt.hashSync('ChangeMe@123', salt),
