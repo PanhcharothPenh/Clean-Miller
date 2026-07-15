@@ -868,24 +868,8 @@ export default function App() {
           {/* Interactive controls and simulators (Bilingual + Role switches) */}
           <div className="flex items-center gap-3">
             
-            {/* Simulation controls wrapper */}
-            <div className="hidden sm:flex items-center bg-slate-50 hover:bg-slate-100/70 border border-slate-200/50 rounded-xl px-3 py-1 transition-all" title="Security Role simulator switcher">
-              <span className="text-[9px] text-slate-400 font-bold uppercase mr-2 flex items-center gap-1 shrink-0">
-                <Shield size={10} className="text-slate-400" />
-                IAM PRIVILEGE:
-              </span>
-              <select
-                value={currentRole}
-                onChange={e => handleRoleSimulationSwap(e.target.value as Role)}
-                className="bg-transparent border-none text-[11px] font-bold text-slate-600 focus:outline-none cursor-pointer uppercase pr-1 font-sans"
-                id="simulator_role_selector"
-              >
-                <option value="Owner">Owner (Seng Sophy)</option>
-                <option value="Admin">Admin (Multi-Branch)</option>
-                <option value="Manager">Manager (Nguon Piseth)</option>
-                <option value="Staff">Helper / Staff (Sok Reaksmey)</option>
-              </select>
-            </div>
+            
+            
 
             {/* Language toggle trigger buttons */}
             <div className="flex bg-slate-50 border border-slate-200/50 rounded-xl p-0.5 text-xs font-bold items-center">
