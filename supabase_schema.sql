@@ -7,6 +7,9 @@ CREATE TABLE IF NOT EXISTS clean24_collections (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Disable Row Level Security to allow direct API synchronization
+ALTER TABLE clean24_collections DISABLE ROW LEVEL SECURITY;
+
 -- Index for rapid JSONB lookups
 CREATE INDEX IF NOT EXISTS idx_collections_data ON clean24_collections USING gin (data);
 
