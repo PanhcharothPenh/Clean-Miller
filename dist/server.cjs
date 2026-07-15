@@ -980,6 +980,7 @@ function seedUsersAndRoles() {
     localDb.users = [
       {
         id: "usr_owner",
+        role: "Owner",
         username: "owner",
         email: "owner@clean24.local",
         fullName: "Executive Owner",
@@ -999,6 +1000,7 @@ function seedUsersAndRoles() {
       },
       {
         id: "usr_sophy",
+        role: "Owner",
         username: "owner_sophy",
         email: "owner@clean24.com",
         fullName: "Seng Sophy",
@@ -1016,6 +1018,7 @@ function seedUsersAndRoles() {
       },
       {
         id: "usr_darith",
+        role: "Admin",
         username: "admin_darith",
         email: "darith.admin@clean24.com",
         fullName: "Chan Darith",
@@ -1033,6 +1036,7 @@ function seedUsersAndRoles() {
       },
       {
         id: "usr_piseth",
+        role: "Manager",
         username: "manager_piseth",
         email: "piseth.tk@clean24.com",
         fullName: "Nguon Piseth",
@@ -1050,6 +1054,7 @@ function seedUsersAndRoles() {
       },
       {
         id: "usr_reaksmey",
+        role: "Staff",
         username: "staff_reaksmey",
         email: "reaksmey.staff@clean24.com",
         fullName: "Sok Reaksmey",
@@ -2104,7 +2109,10 @@ app.get("/api/auth/me", (req, res) => {
   }
 });
 app.get("/api/users", (req, res) => {
-  const safeUsers = localDb.users.map(({ passwordHash, ...rest }) => rest);
+  const safeUsers = localDb.users.map(({ passwordHash, ...rest }) => {
+    const roleName = localDb.roles.find((r) => r.id === rest.roleId)?.name || "Staff";
+    return { ...rest, role: roleName };
+  });
   res.json({ success: true, users: safeUsers });
 });
 app.post("/api/users", (req, res) => {
