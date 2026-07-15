@@ -549,8 +549,7 @@ async function pullCollectionsFromSupabase() {
       console.log("[Clean24 Server] Supabase database is empty. Triggering self-healing database seeding...");
       seedUsersAndRoles();
     }
-    const essentialCollections = ["users", "roles", "permissions", "rolePermissions", "branches"];
-    for (const collId of essentialCollections) {
+    for (const collId of Object.keys(localDb)) {
       const hasData = collId === "rolePermissions" ? Object.keys(localDb[collId] || {}).length > 0 : Array.isArray(localDb[collId]) && localDb[collId].length > 0;
       if (!existingIds.has(collId) && hasData) {
         console.log(`[Clean24 Server] Self-healing sync: pushing missing collection "${collId}" to Supabase...`);

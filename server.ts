@@ -164,9 +164,8 @@ async function pullCollectionsFromSupabase() {
       seedUsersAndRoles();
     }
 
-    // Self-healing check: if essential seeded collections are missing from Supabase, sync them immediately
-    const essentialCollections = ['users', 'roles', 'permissions', 'rolePermissions', 'branches'];
-    for (const collId of essentialCollections) {
+    // Self-healing check: if any collections in localDb are missing from Supabase, sync them immediately
+    for (const collId of Object.keys(localDb)) {
       // For object types like rolePermissions, check size of keys
       const hasData = collId === 'rolePermissions' 
         ? Object.keys(localDb[collId] || {}).length > 0
