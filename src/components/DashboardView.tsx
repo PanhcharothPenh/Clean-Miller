@@ -80,47 +80,59 @@ export default function DashboardView({
 
   const t = translations[lang];
 
+  // Safe arrays fallback to prevent null runtime crashes
+  const safeIncomes = Array.isArray(incomeList) ? incomeList : [];
+  const safeExpenses = Array.isArray(expenseList) ? expenseList : [];
+  const safeSalaries = Array.isArray(salaryList) ? salaryList : [];
+  const safeRevenues = Array.isArray(revenueRecords) ? revenueRecords : [];
+  const safeStaff = Array.isArray(staffList) ? staffList : [];
+  const safeAuditLogs = Array.isArray(auditLogs) ? auditLogs : [];
+
   // Filter helper based on active branch selection
   const filterByBranch = <T extends { branchId?: string; branch_id?: string }>(list: T[]): T[] => {
+    if (!list) return [];
     if (activeBranchId === 'all') return list;
     return list.filter(item => {
+      if (!item) return false;
       const bId = item.branchId || (item as any).branch_id;
       return bId === activeBranchId;
     });
   };
 
-  const branchIncomes = filterByBranch(incomeList);
-  const branchExpenses = filterByBranch(expenseList);
-  const branchSalaries = filterByBranch(salaryList);
-  const branchRevenues = filterByBranch(revenueRecords);
+  const branchIncomes = filterByBranch(safeIncomes);
+  const branchExpenses = filterByBranch(safeExpenses);
+  const branchSalaries = filterByBranch(safeSalaries);
+  const branchRevenues = filterByBranch(safeRevenues);
 
   // 1. Calculations: TODAY METRICS
   const todayDateStr = "2026-06-06"; // Fixed mock date
-  const todayIncomes = branchIncomes.filter(inc => inc.date === todayDateStr);
-  const todayExpenses = branchExpenses.filter(exp => exp.expenseDate === todayDateStr);
+  const todayIncomes = branchIncomes.filter(inc => inc && inc.date === todayDateStr);
+  const todayExpenses = branchExpenses.filter(exp => exp && exp.expenseDate === todayDateStr);
 
-  const todayIncomeSum = todayIncomes.reduce((acc, curr) => acc + curr.totalAmount, 0);
-  const todayExpenseSum = todayExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+  const todayIncomeSum = todayIncomes.reduce((acc, curr) => acc + (curr?.totalAmount || 0), 0);
+  const todayExpenseSum = todayExpenses.reduce((acc, curr) => acc + (curr?.amount || 0), 0);
   const todayProfitSum = todayIncomeSum - todayExpenseSum;
 
   // 2. Calculations: MONTHLY METRICS (June 2026)
-  const monthlyIncomes = branchIncomes.filter(inc => inc.date.startsWith("2026-06"));
-  const monthlyExpenses = branchExpenses.filter(exp => exp.expenseDate.startsWith("2026-06"));
-  const monthlySalaries = branchSalaries.filter(sal => sal.salaryPeriod === "2026-06" && sal.status === "Paid");
+  const monthlyIncomes = branchIncomes.filter(inc => inc && inc.date && inc.date.startsWith("2026-06"));
+  const monthlyExpenses = branchExpenses.filter(exp => exp && exp.expenseDate && exp.expenseDate.startsWith("2026-06"));
+  const monthlySalaries = branchSalaries.filter(sal => sal && sal.salaryPeriod === "2026-06" && sal.status === "Paid");
 
-  const monthlyIncomeSum = monthlyIncomes.reduce((acc, curr) => acc + curr.totalAmount, 0);
-  const monthlyRevenuesSum = branchRevenues.filter(r => r.date.startsWith("2026-06")).reduce((acc, curr) => acc + curr.amountUsd, 0);
-  const monthlyRevenueCombined = (monthlyIncomeSum * exchangeRate) + (monthlyRevenuesSum * exchangeRate);
+  const monthlyIncomeSum = monthlyIncomes.reduce((acc, curr) => acc + (curr?.totalAmount || 0), 0);
+  const monthlyRevenuesSum = branchRevenues.filter(r => r && r.date && r.date.startsWith("2026-06")).reduce((acc, curr) => acc + (curr?.amountUsd || 0), 0);
+  
+  const rate = typeof exchangeRate === 'number' && !isNaN(exchangeRate) ? exchangeRate : 4000;
+  const monthlyRevenueCombined = (monthlyIncomeSum * rate) + (monthlyRevenuesSum * rate);
 
-  const monthlyExpenseCombined = (monthlyExpenses.reduce((acc, curr) => acc + curr.amount, 0) * exchangeRate) + 
-                                  (monthlySalaries.reduce((acc, curr) => acc + curr.netSalary, 0) * exchangeRate);
+  const monthlyExpenseCombined = (monthlyExpenses.reduce((acc, curr) => acc + (curr?.amount || 0), 0) * rate) + 
+                                  (monthlySalaries.reduce((acc, curr) => acc + (curr?.netSalary || 0), 0) * rate);
   const monthlyProfitCombined = monthlyRevenueCombined - monthlyExpenseCombined;
 
   // Active staff count
-  const activeStaffCount = staffList.filter(s => s.status === 'Active').length;
+  const activeStaffCount = safeStaff.filter(s => s && s.status === 'Active').length;
 
   // Format real-time logs for the terminal console
-  const displayLogs = auditLogs && auditLogs.length > 0 ? auditLogs.slice(0, 6) : [
+  const displayLogs = safeAuditLogs.length > 0 ? safeAuditLogs.slice(0, 6) : [
     "2026-06-06 15:14:54: User fully authenticated: Welcome, Panhcharoth (Owner)",
     "2026-06-06 15:14:48: User logged out successfully.",
     "2026-06-06 15:14:43: Updated account credentials for Panhcharoth",
@@ -137,9 +149,10 @@ export default function DashboardView({
 
   // Dynamic Logins Parser from real audit logs array
   const getLoginEventsFromLogs = () => {
-    const loginLogs = auditLogs.filter(log => 
-      log.toLowerCase().includes('authenticated') || 
-      log.toLowerCase().includes('logged in')
+    const loginLogs = safeAuditLogs.filter(log => 
+      log && typeof log === 'string' && 
+      (log.toLowerCase().includes('authenticated') || 
+       log.toLowerCase().includes('logged in'))
     );
     
     if (loginLogs.length > 0) {
