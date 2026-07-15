@@ -97,6 +97,7 @@ export default function App() {
 
   // Live Database Sync States
   const [dbSyncStatus, setDbSyncStatus] = useState<'synced' | 'connecting' | 'error'>('connecting');
+  const [isLoadedFromServer, setIsLoadedFromServer] = useState(false);
 
   useEffect(() => {
     const checkSync = async () => {
@@ -192,6 +193,7 @@ export default function App() {
 
   // Load database on initialization
   useEffect(() => {
+    // 1. Fast load from browser local storage cache
     setBranches(db.getBranches());
     setStaff(db.getStaff());
     setSalaries(db.getSalaries());
@@ -221,6 +223,45 @@ export default function App() {
       `[${new Date().toLocaleTimeString()}] Authenticated Clean24 admin session safely.`,
       `[${new Date().toLocaleTimeString()}] Checked multi-branch isolation integrity check sum.`
     ]);
+
+    // 2. Fetch the latest database state from cloud server (Supabase / localDb cache)
+    fetch('/api/sync-data')
+      .then(r => r.json())
+      .then(res => {
+        if (res && res.success && res.data) {
+          const s = res.data;
+          if (s.branches) { setBranches(s.branches); db.saveBranches(s.branches); }
+          if (s.staff) { setStaff(s.staff); db.saveStaff(s.staff); }
+          if (s.salaries) { setSalaries(s.salaries); db.saveSalaries(s.salaries); }
+          if (s.salarySchedules) { setSalarySchedules(s.salarySchedules); db.saveSalarySchedules(s.salarySchedules); }
+          if (s.salaryAdvances) { setSalaryAdvances(s.salaryAdvances); db.saveSalaryAdvances(s.salaryAdvances); }
+          if (s.attendance) { setAttendance(s.attendance); db.saveAttendance(s.attendance); }
+          if (s.incomes) { setIncomes(s.incomes); db.saveIncomes(s.incomes); }
+          if (s.expenses) { setExpenses(s.expenses); db.saveExpenses(s.expenses); }
+          if (s.inventory) { setInventory(s.inventory); db.saveInventory(s.inventory); }
+          if (s.machines) { setMachines(s.machines); db.saveMachines(s.machines); }
+          if (s.users) { setUsers(s.users); db.saveUsers(s.users); }
+          if (s.coinTransactions) { setCoinTransactions(s.coinTransactions); db.saveCoinTransactions(s.coinTransactions); }
+          if (s.revenueRecords) { setRevenueRecords(s.revenueRecords); db.saveRevenueRecords(s.revenueRecords); }
+          if (s.gasRecords) { setGasRecords(s.gasRecords); db.saveGasRecords(s.gasRecords); }
+          if (s.detergentRecords) { setDetergentRecords(s.detergentRecords); db.saveDetergentRecords(s.detergentRecords); }
+          if (s.softenerRecords) { setSoftenerRecords(s.softenerRecords); db.saveSoftenerRecords(s.softenerRecords); }
+          if (s.stockTransactions) { setStockTransactions(s.stockTransactions); db.saveStockTransactions(s.stockTransactions); }
+          if (s.suppliers) { setSuppliers(s.suppliers); db.saveSuppliers(s.suppliers); }
+          if (s.debts) { setDebts(s.debts); db.saveDebts(s.debts); }
+          if (s.debtPayments) { setDebtPayments(s.debtPayments); db.saveDebtPayments(s.debtPayments); }
+          if (s.cashDrawers) { setCashDrawers(s.cashDrawers); db.saveCashDrawers(s.cashDrawers); }
+          if (s.cashDrawerTransactions) { setCashDrawerTransactions(s.cashDrawerTransactions); db.saveCashDrawerTransactions(s.cashDrawerTransactions); }
+          if (s.monthClosings) { setMonthClosings(s.monthClosings); db.saveMonthClosings(s.monthClosings); }
+          
+          console.log('[Clean24 Sync] Loaded database state from cloud server!');
+        }
+        setIsLoadedFromServer(true);
+      })
+      .catch(err => {
+        console.warn('Backend load warning:', err.message);
+        setIsLoadedFromServer(true);
+      });
   }, []);
 
   // Sync state mutations back to key-value local storage
@@ -318,6 +359,7 @@ export default function App() {
 
   // Synchronize database state to backend Express context for background scheduling checks
   useEffect(() => {
+    if (!isLoadedFromServer) return;
     const payload = {
       branches,
       staff,
@@ -370,7 +412,8 @@ export default function App() {
     debtPayments,
     cashDrawers,
     cashDrawerTransactions,
-    monthClosings
+    monthClosings,
+    isLoadedFromServer
   ]);
 
   // Utility to append real time administrative logs

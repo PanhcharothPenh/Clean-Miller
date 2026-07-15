@@ -2231,6 +2231,14 @@ app.get('/api/login-history', (req, res) => {
   res.json({ success: true, logs: localDb.loginHistory || [] });
 });
 
+app.get('/api/sync-data', (req, res) => {
+  try {
+    res.json({ success: true, data: localDb });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.post('/api/sync-data', (req, res) => {
   try {
     const payload = req.body as Partial<SyncPayload>;
