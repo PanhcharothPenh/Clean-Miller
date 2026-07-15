@@ -1082,6 +1082,8 @@ app.get("/api/debug-supabase", async (req, res) => {
   let isSupabaseActive = !!supabase;
   let testSelectResult = null;
   let testSelectError = null;
+  let testWriteResult = null;
+  let testWriteError = null;
   if (supabase) {
     try {
       const { data, error } = await supabase.from("clean24_collections").select("*");
@@ -1089,6 +1091,12 @@ app.get("/api/debug-supabase", async (req, res) => {
         testSelectError = error.message || error;
       } else {
         testSelectResult = data ? data.map((d) => ({ id: d.id, updated_at: d.updated_at })) : [];
+      }
+      const { data: wData, error: wError } = await supabase.from("clean24_collections").upsert({ id: "test_sync_write", data: { time: (/* @__PURE__ */ new Date()).toISOString(), status: "success" } }).select();
+      if (wError) {
+        testWriteError = wError.message || wError;
+      } else {
+        testWriteResult = wData;
       }
     } catch (err) {
       testSelectError = err.message;
@@ -1100,6 +1108,8 @@ app.get("/api/debug-supabase", async (req, res) => {
     envKey: process.env.SUPABASE_ANON_KEY ? process.env.SUPABASE_ANON_KEY.substring(0, 15) + "..." : "not set",
     testSelectResult,
     testSelectError,
+    testWriteResult,
+    testWriteError,
     localDbKeys: Object.keys(localDb),
     usersCount: localDb.users ? localDb.users.length : 0
   });
