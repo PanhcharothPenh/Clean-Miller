@@ -462,6 +462,24 @@ var import_supabase_js = require("@supabase/supabase-js");
 var app = (0, import_express.default)();
 var PORT = 3e3;
 app.use((0, import_cors.default)());
+app.use((req, res, next) => {
+  pendingSupabasePushes = [];
+  const originalSend = res.send;
+  res.send = async function(body) {
+    if (pendingSupabasePushes.length > 0) {
+      try {
+        console.log(`[Clean24 Server] Awaiting ${pendingSupabasePushes.length} database sync tasks before response...`);
+        await Promise.all(pendingSupabasePushes);
+        console.log("[Clean24 Server] Database sync tasks completed!");
+      } catch (err) {
+        console.error("[Clean24 Server] Error syncing database tasks before response:", err.message);
+      }
+      pendingSupabasePushes = [];
+    }
+    return originalSend.call(this, body);
+  };
+  next();
+});
 app.use(import_express.default.json({ limit: "50mb" }));
 app.get("/api/download-project", (req, res) => {
   const filePath = import_path2.default.join(process.cwd(), "project.tar.gz");
@@ -473,6 +491,7 @@ app.get("/api/download-project", (req, res) => {
 });
 var SERVER_DB_PATH = import_path2.default.join(process.cwd(), "server-db.json");
 var supabase = null;
+var pendingSupabasePushes = [];
 try {
   const supabaseUrl = (process.env.SUPABASE_URL || "").replace(/['"]/g, "").trim();
   const supabaseKey = (process.env.SUPABASE_ANON_KEY || "").replace(/['"]/g, "").trim();
@@ -798,9 +817,8 @@ function saveLocalDb() {
     import_fs2.default.writeFileSync(SERVER_DB_PATH, JSON.stringify(localDb, null, 2), "utf8");
     if (supabase) {
       Object.keys(localDb).forEach((collectionId) => {
-        pushCollectionToSupabase(collectionId).catch((err) => {
-          console.error(`[Clean24 Server] Auto-sync to Supabase failed for ${collectionId}:`, err.message);
-        });
+        const p = pushCollectionToSupabase(collectionId);
+        pendingSupabasePushes.push(p);
       });
     }
   } catch (e) {

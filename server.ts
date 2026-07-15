@@ -54,6 +54,28 @@ const app = express();
 const PORT = 3000;
 
 app.use(cors());
+
+// Intercept Express response lifecycle to await pending Supabase pushes before freezing the container
+app.use((req, res, next) => {
+  pendingSupabasePushes = [];
+
+  const originalSend = res.send;
+  res.send = async function (body) {
+    if (pendingSupabasePushes.length > 0) {
+      try {
+        console.log(`[Clean24 Server] Awaiting ${pendingSupabasePushes.length} database sync tasks before response...`);
+        await Promise.all(pendingSupabasePushes);
+        console.log('[Clean24 Server] Database sync tasks completed!');
+      } catch (err: any) {
+        console.error('[Clean24 Server] Error syncing database tasks before response:', err.message);
+      }
+      pendingSupabasePushes = [];
+    }
+    return originalSend.call(this, body);
+  } as any;
+
+  next();
+});
 app.use(express.json({ limit: '50mb' }));
 
 app.get('/api/download-project', (req, res) => {
@@ -72,6 +94,7 @@ const SERVER_DB_PATH = path.join(process.cwd(), 'server-db.json');
 import { createClient } from '@supabase/supabase-js';
 
 let supabase: any = null;
+let pendingSupabasePushes: Promise<any>[] = [];
 try {
   const supabaseUrl = (process.env.SUPABASE_URL || '').replace(/['"]/g, '').trim();
   const supabaseKey = (process.env.SUPABASE_ANON_KEY || '').replace(/['"]/g, '').trim();
@@ -416,9 +439,8 @@ function saveLocalDb() {
     // Asynchronously push all updated collections to Supabase
     if (supabase) {
       Object.keys(localDb).forEach(collectionId => {
-        pushCollectionToSupabase(collectionId).catch(err => {
-          console.error(`[Clean24 Server] Auto-sync to Supabase failed for ${collectionId}:`, err.message);
-        });
+        const p = pushCollectionToSupabase(collectionId);
+        pendingSupabasePushes.push(p);
       });
     }
   } catch (e) {
