@@ -444,7 +444,6 @@ export default function App() {
             salaryList={salaries}
             incomeList={incomes}
             expenseList={expenses}
-            inventoryList={inventory}
             coinTransactions={coinTransactions}
             revenueRecords={revenueRecords}
             gasRecords={gasRecords}
@@ -453,6 +452,10 @@ export default function App() {
             stockTransactions={stockTransactions}
             lang={lang}
             exchangeRate={exchangeRate}
+            setActiveTab={setActiveTab}
+            currentUser={currentUser}
+            auditLogs={auditLogs}
+            onAddLog={handleAddNewAuditLog}
           />
         );
       case 'branches':
