@@ -996,6 +996,7 @@ app.use((req, res, next) => {
   // Allow public access to specify safe paths
   const publicPaths = [
     '/api/health',
+    '/api/debug-supabase',
     '/api/auth/login',
     '/api/auth/refresh-token',
     '/api/auth/forgot-password',

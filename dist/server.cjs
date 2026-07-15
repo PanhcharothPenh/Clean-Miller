@@ -1345,6 +1345,7 @@ app.get(["/auth/telegram/callback", "/auth/telegram/callback/"], async (req, res
 app.use((req, res, next) => {
   const publicPaths = [
     "/api/health",
+    "/api/debug-supabase",
     "/api/auth/login",
     "/api/auth/refresh-token",
     "/api/auth/forgot-password",
