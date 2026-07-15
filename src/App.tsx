@@ -95,6 +95,29 @@ export default function App() {
   const [authenticatedUser, setAuthenticatedUser] = useState<any | null>(null);
   const [authChecking, setAuthChecking] = useState<boolean>(true);
 
+  // Live Database Sync States
+  const [dbSyncStatus, setDbSyncStatus] = useState<'synced' | 'connecting' | 'error'>('connecting');
+
+  useEffect(() => {
+    const checkSync = async () => {
+      try {
+        const res = await fetch('/api/debug-supabase');
+        if (!res.ok) throw new Error('API down');
+        const data = await res.json();
+        if (data.isSupabaseActive && !data.testSelectError) {
+          setDbSyncStatus('synced');
+        } else {
+          setDbSyncStatus('error');
+        }
+      } catch (e) {
+        setDbSyncStatus('error');
+      }
+    };
+    checkSync();
+    const interval = setInterval(checkSync, 20000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Database lists
   const [branches, setBranches] = useState<Branch[]>(() => db.getBranches());
   const [staff, setStaff] = useState<Staff[]>(() => db.getStaff());
@@ -867,6 +890,40 @@ export default function App() {
 
           {/* Interactive controls and simulators (Bilingual + Role switches) */}
           <div className="flex items-center gap-3">
+            
+            {/* Live Database Sync Indicator */}
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/50 rounded-xl px-2.5 py-1.5 text-[10px] font-bold shrink-0 select-none">
+              {dbSyncStatus === 'synced' ? (
+                <>
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-emerald-700 font-semibold tracking-wide uppercase text-[8px]">
+                    {lang === 'en' ? 'Cloud Synced' : 'ទិន្នន័យបានភ្ជាប់'}
+                  </span>
+                </>
+              ) : dbSyncStatus === 'connecting' ? (
+                <>
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
+                  </span>
+                  <span className="text-amber-700 font-semibold tracking-wide uppercase text-[8px]">
+                    {lang === 'en' ? 'Checking Sync...' : 'កំពុងឆែក...'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
+                  </span>
+                  <span className="text-rose-700 font-semibold tracking-wide uppercase text-[8px]">
+                    {lang === 'en' ? 'Offline Mode' : 'គ្មានការតភ្ជាប់'}
+                  </span>
+                </>
+              )}
+            </div>
             
             
             
