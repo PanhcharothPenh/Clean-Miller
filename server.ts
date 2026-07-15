@@ -687,6 +687,34 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', serverTime: new Date().toISOString() });
 });
 
+// Supabase Connection Diagnostic Debug Route
+app.get('/api/debug-supabase', async (req, res) => {
+  let isSupabaseActive = !!supabase;
+  let testSelectResult = null;
+  let testSelectError = null;
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.from('clean24_collections').select('*');
+      if (error) {
+        testSelectError = error.message || error;
+      } else {
+        testSelectResult = data ? data.map(d => ({ id: d.id, updated_at: d.updated_at })) : [];
+      }
+    } catch (err) {
+      testSelectError = err.message;
+    }
+  }
+  res.json({
+    isSupabaseActive,
+    envUrl: process.env.SUPABASE_URL ? (process.env.SUPABASE_URL.substring(0, 15) + '...') : 'not set',
+    envKey: process.env.SUPABASE_ANON_KEY ? (process.env.SUPABASE_ANON_KEY.substring(0, 15) + '...') : 'not set',
+    testSelectResult,
+    testSelectError,
+    localDbKeys: Object.keys(localDb),
+    usersCount: localDb.users ? localDb.users.length : 0
+  });
+});
+
 // Helper to resolve the robust application origin behind proxy hosts
 const getAppOrigin = (req: any) => {
   if (process.env.APP_URL) {
