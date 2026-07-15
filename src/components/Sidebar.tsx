@@ -293,7 +293,7 @@ export default function Sidebar({
             <select
               value={activeBranchId}
               onChange={(e) => setActiveBranchId(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg p-1.5 focus:outline-none focus:border-emerald-500 font-sans cursor-pointer transition-all"
+              className="w-full bg-slate-900 border border-slate-800 text-xs text-slate-200 rounded-lg p-1.5 focus:outline-none focus:border-blue-500 font-sans cursor-pointer transition-all"
               id="sidebar_branch_selector"
             >
               {currentRole === 'Owner' && (
@@ -317,7 +317,7 @@ export default function Sidebar({
               placeholder={lang === 'en' ? "Search menus..." : "ស្វែងរកមុខងារ..."}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-900/60 border border-slate-800 text-xs text-slate-200 placeholder-slate-600 rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-emerald-500 font-sans transition-all"
+              className="w-full bg-slate-900/60 border border-slate-800 text-xs text-slate-200 placeholder-slate-600 rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-blue-500 font-sans transition-all"
             />
             {searchQuery && (
               <button 
@@ -365,7 +365,7 @@ export default function Sidebar({
                         }}
                         className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all duration-150 focus:outline-none cursor-pointer group/item
                           ${active 
-                            ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-bold shadow-md shadow-emerald-950/45 scale-[1.02]' 
+                            ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold shadow-md shadow-blue-950/45 scale-[1.02]' 
                             : 'text-slate-400 hover:bg-slate-900/50 hover:text-slate-100'
                           }
                         `}
@@ -430,7 +430,7 @@ export default function Sidebar({
                           }}
                           className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all duration-150 focus:outline-none cursor-pointer group/item
                             ${active 
-                              ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white font-bold shadow-md shadow-emerald-950/45 scale-[1.02]' 
+                              ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold shadow-md shadow-blue-950/45 scale-[1.02]' 
                               : 'text-slate-400 hover:bg-slate-900/50 hover:text-slate-100'
                             }
                           `}
