@@ -71,9 +71,16 @@ const SERVER_DB_PATH = path.join(process.cwd(), 'server-db.json');
 // Supabase Integration Adapter Configuration
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || '';
-const supabase = (supabaseUrl && supabaseKey) ? createClient(supabaseUrl, supabaseKey) : null;
+let supabase: any = null;
+try {
+  const supabaseUrl = (process.env.SUPABASE_URL || '').replace(/['"]/g, '').trim();
+  const supabaseKey = (process.env.SUPABASE_ANON_KEY || '').replace(/['"]/g, '').trim();
+  if (supabaseUrl && supabaseKey) {
+    supabase = createClient(supabaseUrl, supabaseKey);
+  }
+} catch (e: any) {
+  console.error('[Clean24 Server] Failed to initialize Supabase client:', e.message);
+}
 
 if (supabase) {
   console.log('[Clean24 Server] Supabase client initialized successfully.');
