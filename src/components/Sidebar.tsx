@@ -339,7 +339,7 @@ export default function Sidebar({
               {/* Group Header */}
               <button
                 onClick={() => toggleGroup('clean24_favorites_group')}
-                className="w-full flex items-center justify-between px-2 py-1 text-[9.5px] font-bold text-amber-500 uppercase tracking-widest hover:text-amber-600 transition-colors cursor-pointer"
+                className="w-full flex items-center justify-between px-2 py-1 text-xs font-black text-amber-500 uppercase tracking-widest hover:text-amber-600 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-1.5">
                   <Star size={11} className="fill-amber-400 text-amber-400 shrink-0" />
@@ -363,7 +363,7 @@ export default function Sidebar({
                           setActiveTab(item.id as any);
                           setIsOpen(false);
                         }}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-all duration-150 focus:outline-none cursor-pointer group/item
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 py-2.5 px-3.5 focus:outline-none cursor-pointer group/item
                           ${active 
                             ? 'bg-blue-600 text-white font-semibold shadow-xs' 
                             : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
@@ -372,7 +372,7 @@ export default function Sidebar({
                         id={`fav_tab_${item.id}`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <item.icon size={13.5} className={active ? 'text-white' : 'text-slate-400 shrink-0'} />
+                          <item.icon size={18} className={active ? 'text-white' : 'text-slate-400 shrink-0'} />
                           <span className="truncate">{item.label}</span>
                         </div>
                         <span 
@@ -380,7 +380,7 @@ export default function Sidebar({
                           className="p-1 rounded-md hover:bg-slate-200/50 cursor-pointer transition-colors shrink-0"
                         >
                           <Star 
-                            size={12.5} 
+                            size={16} 
                             className="fill-amber-400 text-amber-400" 
                           />
                         </span>
@@ -404,7 +404,7 @@ export default function Sidebar({
                 {/* Group Header */}
                 <button
                   onClick={() => toggleGroup(group.title)}
-                  className="w-full flex items-center justify-between px-2 py-1 text-[9.5px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-800 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between px-2 py-1 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-800 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-1.5">
                     <group.icon size={11} className="text-slate-400 shrink-0" />
@@ -428,7 +428,7 @@ export default function Sidebar({
                             setActiveTab(item.id as any);
                             setIsOpen(false);
                           }}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-all duration-150 focus:outline-none cursor-pointer group/item
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 py-2.5 px-3.5 focus:outline-none cursor-pointer group/item
                             ${active 
                               ? 'bg-blue-600 text-white font-semibold shadow-xs' 
                               : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
@@ -437,7 +437,7 @@ export default function Sidebar({
                           id={`nav_tab_${item.id}`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <item.icon size={13.5} className={active ? 'text-white' : 'text-slate-400 shrink-0'} />
+                            <item.icon size={18} className={active ? 'text-white' : 'text-slate-400 shrink-0'} />
                             <span className="truncate">{item.label}</span>
                           </div>
                           <span 
@@ -445,7 +445,7 @@ export default function Sidebar({
                             className="p-1 rounded-md hover:bg-slate-200/50 cursor-pointer transition-colors shrink-0"
                           >
                             <Star 
-                              size={12.5} 
+                              size={16} 
                               className={favorites.includes(item.id) 
                                 ? 'fill-amber-400 text-amber-400' 
                                 : 'text-slate-350 opacity-0 group-hover/item:opacity-100 transition-opacity'
