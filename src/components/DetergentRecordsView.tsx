@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { DetergentRecord, Role, Branch, InventoryItem, StockTransaction } from '../types';
+import { printElement } from '../utils';
 
 interface DetergentRecordsViewProps {
   currentRole: Role;
@@ -632,10 +633,10 @@ export default function DetergentRecordsView({
     if (!isPreviewOpen) {
       setIsPreviewOpen(true);
       setTimeout(() => {
-        window.print();
-      }, 300);
+        printElement('paper-form-printing-container', 'Liquid Soap & Detergent Ledger');
+      }, 250);
     } else {
-      window.print();
+      printElement('paper-form-printing-container', 'Liquid Soap & Detergent Ledger');
     }
   };
 

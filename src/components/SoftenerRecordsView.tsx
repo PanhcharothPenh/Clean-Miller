@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { SoftenerRecord, Role, Branch, InventoryItem, StockTransaction } from '../types';
-import { formatCurrency } from '../utils';
+import { formatCurrency, printElement } from '../utils';
 
 interface SoftenerRecordsViewProps {
   currentRole: Role;
@@ -507,10 +507,10 @@ export default function SoftenerRecordsView({
     if (!isPreviewOpen) {
       setIsPreviewOpen(true);
       setTimeout(() => {
-        window.print();
-      }, 300);
+        printElement('paper-form-printing-container', 'Fabric Softener Ledger');
+      }, 250);
     } else {
-      window.print();
+      printElement('paper-form-printing-container', 'Fabric Softener Ledger');
     }
   };
 

@@ -80,79 +80,76 @@ export function exportToCSV(filename: string, headers: string[], rows: any[][]) 
 // Helper to trigger browser printing of a specific element id
 export function printElement(elementId: string, title: string) {
   const element = document.getElementById(elementId);
-  if (!element) return;
-  
-  const printWindow = window.open('', '_blank', 'width=900,height=700');
-  if (printWindow) {
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>${title}</title>
-          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&display=swap">
-          <style>
-            * { box-sizing: border-box; }
-            body {
-              font-family: 'Kantumruy Pro', system-ui, sans-serif;
-              padding: 24px;
-              margin: 0;
-              background: #ffffff;
-              color: #0f172a;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 16px;
-              margin-bottom: 16px;
-            }
-            th, td {
-              border: 1px solid #cbd5e1;
-              padding: 8px 12px;
-              text-align: left;
-              font-size: 12px;
-            }
-            th {
-              background-color: #f1f5f9;
-              font-weight: 700;
-            }
-            h1 { font-size: 20px; color: #0f172a; margin: 0 0 4px 0; }
-            h2 { font-size: 14px; color: #475569; margin: 0; font-weight: 500; }
-            .header-info {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              border-bottom: 2px solid #e2e8f0;
-              padding-bottom: 12px;
-              margin-bottom: 16px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header-info">
-            <div>
-              <h1>Clean24 Laundry</h1>
-              <h2>${title}</h2>
-            </div>
-            <div style="text-align: right; font-size: 11px; color: #64748b;">
-              <strong>Printed On:</strong> ${new Date().toLocaleString()}<br>
-              <strong>Status:</strong> Official Report
-            </div>
-          </div>
+  if (!element) {
+    console.error(`Print target #${elementId} not found`);
+    return;
+  }
+
+  // Clone head style tags so Tailwind and custom fonts apply to print output
+  const styleTags = Array.from(document.head.querySelectorAll('style, link[rel="stylesheet"]'))
+    .map(el => el.outerHTML)
+    .join('\n');
+
+  const printHtml = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>${title}</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        ${styleTags}
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 0.6cm;
+          }
+          html, body {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            padding: 12px !important;
+            margin: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .print\\:hidden, .no-print {
+            display: none !important;
+          }
+        </style>
+      </head>
+      <body>
+        <div>
           ${element.innerHTML}
-          <script>
-            window.onload = function() {
-              setTimeout(function() {
-                window.print();
-                window.close();
-              }, 250);
-            };
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+        </div>
+      </body>
+    </html>
+  `;
+
+  let iframe = document.getElementById('clean24-global-print-iframe') as HTMLIFrameElement;
+  if (!iframe) {
+    iframe = document.createElement('iframe');
+    iframe.id = 'clean24-global-print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+  }
+
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (iframeDoc) {
+    iframeDoc.open();
+    iframeDoc.write(printHtml);
+    iframeDoc.close();
+
+    setTimeout(() => {
+      if (iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+      }
+    }, 350);
   }
 }
 

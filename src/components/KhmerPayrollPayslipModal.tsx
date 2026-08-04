@@ -7,6 +7,7 @@ import React from 'react';
 import { X, Copy, Send, Image as ImageIcon, Printer, CheckCircle2, AlertCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { generatePayslipText } from '../utils/khmerPayrollUtils';
+import { printElement } from '../utils';
 
 interface KhmerPayrollPayslipModalProps {
   isOpen: boolean;
@@ -84,7 +85,7 @@ export default function KhmerPayrollPayslipModal({
   };
 
   const printPayslip = () => {
-    window.print();
+    printElement('payslip-print-area', 'Employee Salary Payslip');
   };
 
   return (
