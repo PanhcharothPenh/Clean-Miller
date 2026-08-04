@@ -930,36 +930,33 @@ export default function RevenueRecordsView({
 
           <div className="bg-white border-2 border-slate-300 rounded-b-2xl shadow-md overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse" style={{ minWidth: '1300px' }}>
+              <table className="w-full text-left border-collapse" style={{ minWidth: '1200px' }}>
                 <thead>
-                  {/* High fidelity cyan main headers */}
+                  {/* High fidelity cyan main headers matching PDF layout */}
                   <tr className="bg-cyan-600 text-white border-b-2 border-cyan-800 text-center font-bold text-xs select-none">
-                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[140px] uppercase font-sans tracking-wide">
+                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[110px] uppercase font-sans tracking-wide">
                       ថ្ងៃ/ម៉ោង<br/><span className="text-[9px] font-normal tracking-normal">(Date / Time)</span>
                     </th>
-                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[120px] uppercase font-sans">
-                      កុងទ័រផ្ដើម (លុយសុទ្ធ)<br/><span className="text-[9px] font-normal tracking-normal">(Cash Start Counter)</span>
+                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[150px] uppercase font-sans">
+                      កុងទ័រចាប់ផ្តើម<br/><span className="text-[9px] font-normal tracking-normal">(Start Counter)</span>
                     </th>
-                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[120px] uppercase font-sans">
-                      កុងទ័របញ្ចប់ (លុយសុទ្ធ)<br/><span className="text-[9px] font-normal tracking-normal">(Cash End Counter)</span>
+                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[150px] uppercase font-sans">
+                      កុងទ័របញ្ចប់<br/><span className="text-[9px] font-normal tracking-normal">(End Counter)</span>
                     </th>
-                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[120px] uppercase font-sans">
-                      កុងទ័រផ្ដើម (ABA)<br/><span className="text-[9px] font-normal tracking-normal">(ABA Start Counter)</span>
-                    </th>
-                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[120px] uppercase font-sans">
-                      កុងទ័របញ្ចប់ (ABA)<br/><span className="text-[9px] font-normal tracking-normal">(ABA End Counter)</span>
-                    </th>
-                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[200px] uppercase font-sans">
+                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[140px] uppercase font-sans">
                       ចំណាំ<br/><span className="text-[9px] font-normal tracking-normal">(Notes)</span>
                     </th>
-                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[130px] uppercase font-sans bg-cyan-700/65">
-                      ចំណូលលុយសុទ្ធ<br/><span className="text-[9px] font-normal tracking-normal">(Cash Revenue)</span>
+                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[120px] uppercase font-sans bg-cyan-700/65">
+                      លុយសុទ្ធ<br/><span className="text-[9px] font-normal tracking-normal">(Cash Revenue)</span>
                     </th>
-                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[130px] uppercase font-sans bg-cyan-700/65">
-                      ចំណូល ABA<br/><span className="text-[9px] font-normal tracking-normal">(ABA Revenue)</span>
+                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[120px] uppercase font-sans bg-cyan-700/65">
+                      ABA<br/><span className="text-[9px] font-normal tracking-normal">(ABA Revenue)</span>
                     </th>
-                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[150px] uppercase font-sans bg-cyan-700">
-                      ចំណូលសរុបប្រចាំថ្ងៃ<br/><span className="text-[9px] font-normal tracking-normal">(Daily Revenue)</span>
+                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[140px] uppercase font-sans bg-cyan-700">
+                      លុយសរុបប្រចាំថ្ងៃ<br/><span className="text-[9px] font-normal tracking-normal">(Daily Revenue)</span>
+                    </th>
+                    <th className="py-2.5 px-2 border-r border-cyan-700 w-[120px] uppercase font-sans bg-cyan-700/80">
+                      ទទួល<br/><span className="text-[9px] font-normal tracking-normal">(Handover)</span>
                     </th>
                     <th className="py-2.5 px-2 w-[110px] uppercase font-sans print:hidden">
                       សកម្មភាព<br/><span className="text-[9px] font-normal tracking-normal">(Action)</span>
@@ -967,7 +964,7 @@ export default function RevenueRecordsView({
                   </tr>
                 </thead>
 
-                <tbody className="text-xs divide-y-2 divide-slate-200">
+                <tbody className="text-xs border-t border-slate-300 divide-y-2 divide-slate-300">
                   {processedRows.map((row, index) => {
                     const isDirty = row.isDirty;
                     const isSavedNow = savedRowIndex === index;
@@ -983,170 +980,189 @@ export default function RevenueRecordsView({
                       : (localRows[index - 1]?.endCounterAba || 0);
 
                     return (
-                      <tr key={row.day} className={`transition-colors border-t border-slate-200 ${isDirty ? 'bg-amber-50/10' : ''} ${isSavedNow ? 'bg-cyan-50/70' : 'bg-white hover:bg-slate-50/30'}`}>
-                        
-                        {/* 1. Date/Time Label */}
-                        <td className="py-2.5 px-2 border-r border-slate-200 text-center select-none bg-slate-50 text-slate-755">
-                          <div className="flex flex-col items-center justify-center gap-1">
-                            <span className="font-extrabold font-mono text-xs tracking-tight text-slate-800 leading-none">{row.label}</span>
-                            <div className="flex items-center justify-center gap-0.5 border border-slate-200 bg-white px-1.5 py-0.5 rounded-lg w-[68px]">
-                              <span className="text-[9px] font-bold text-slate-400">🕒</span>
-                              <input 
-                                type="text"
-                                value={row.time}
-                                onChange={(e) => handleCellChange(index, 'time', e.target.value)}
-                                className="w-8 text-center font-bold font-mono text-[10px] text-slate-600 bg-transparent focus:outline-none" 
-                              />
+                      <React.Fragment key={row.day}>
+                        {/* Sub-row 1: Cash Counter & Cash Revenue */}
+                        <tr className={`transition-colors border-t border-slate-300 ${isDirty ? 'bg-amber-50/20' : ''} ${isSavedNow ? 'bg-cyan-50/70' : 'bg-white hover:bg-slate-50/40'}`}>
+                          {/* 1. Date/Time Label */}
+                          <td rowSpan={2} className="py-2 px-2 border-r border-slate-200 text-center select-none bg-slate-50 text-slate-755 align-middle">
+                            <div className="flex flex-col items-center justify-center gap-1">
+                              <span className="font-extrabold font-mono text-xs tracking-tight text-slate-800 leading-none">{row.label}</span>
+                              <div className="flex items-center justify-center gap-0.5 border border-slate-200 bg-white px-1.5 py-0.5 rounded-lg w-[68px]">
+                                <span className="text-[9px] font-bold text-slate-400">🕒</span>
+                                <input 
+                                  type="text"
+                                  value={row.time}
+                                  onChange={(e) => handleCellChange(index, 'time', e.target.value)}
+                                  className="w-8 text-center font-bold font-mono text-[10px] text-slate-600 bg-transparent focus:outline-none" 
+                                />
+                              </div>
                             </div>
-                          </div>
-                        </td>
+                          </td>
 
-                        {/* 2. Cash Start Counter (Editable) */}
-                        <td className="p-1 border-r border-slate-200">
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-1 rounded-lg px-2 py-1 border border-amber-200 bg-amber-50/10 focus-within:border-amber-400 focus-within:ring-1 focus-within:ring-amber-400">
+                          {/* 2. Cash Start Counter */}
+                          <td className="p-1.5 border-r border-slate-200 border-b border-slate-200">
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-1 rounded-lg px-2 py-1 border border-amber-200 bg-amber-50/10 focus-within:border-amber-400 focus-within:ring-1 focus-within:ring-amber-400">
+                                <span className="text-[9px] font-bold text-amber-700 uppercase">Cash</span>
+                                <input
+                                  type="number"
+                                  value={row.startCounter === 0 ? '' : row.startCounter}
+                                  onChange={(e) => handleCellChange(index, 'startCounter', e.target.value)}
+                                  placeholder="0"
+                                  className="w-full text-right font-black font-mono focus:outline-none text-xs text-slate-800 bg-transparent"
+                                />
+                              </div>
+                              {prevEndCash > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCellChange(index, 'startCounter', prevEndCash)}
+                                  className="text-left text-[9px] text-cyan-600 hover:text-cyan-800 font-bold mt-1 block select-none bg-cyan-50/50 hover:bg-cyan-50 border border-cyan-100 px-1 py-0.5 rounded cursor-pointer transition-colors"
+                                >
+                                  💡 Suggested: {prevEndCash.toLocaleString()}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* 3. Cash End Counter */}
+                          <td className="p-1.5 border-r border-slate-200 border-b border-slate-200">
+                            <div className={`flex items-center gap-1 border rounded-lg px-2 py-1 ${isCashNegative ? 'bg-rose-50 border-rose-300' : 'bg-sky-50/20 border-sky-100'}`}>
+                              <span className="text-[9px] font-bold text-sky-700 uppercase">Cash</span>
                               <input
                                 type="number"
-                                value={row.startCounter === 0 ? '' : row.startCounter}
-                                onChange={(e) => handleCellChange(index, 'startCounter', e.target.value)}
+                                value={row.endCounter === 0 ? '' : row.endCounter}
+                                onChange={(e) => handleCellChange(index, 'endCounter', e.target.value)}
                                 placeholder="0"
-                                className="w-full text-right font-black font-mono focus:outline-none text-xs text-slate-800 bg-transparent"
+                                className={`w-full text-right font-black font-mono focus:outline-none text-xs ${isCashNegative ? 'text-rose-700 bg-transparent' : 'text-blue-900 bg-transparent'}`}
                               />
                             </div>
-                            {prevEndCash > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => handleCellChange(index, 'startCounter', prevEndCash)}
-                                className="text-left text-[9px] text-cyan-600 hover:text-cyan-800 font-bold mt-1 block select-none bg-cyan-50/50 hover:bg-cyan-50 border border-cyan-100 px-1 py-0.5 rounded cursor-pointer transition-colors"
-                                title={lang === 'en' ? "Click to Accept Suggestion" : "ចុចដើម្បីព្រមទទួលយក"}
-                              >
-                                💡 Suggested: {prevEndCash.toLocaleString()}
-                              </button>
+                            {isCashNegative && (
+                              <span className="text-[8px] text-rose-650 bg-rose-100 px-1 py-0.5 rounded font-black uppercase mt-1 block text-center animate-pulse leading-none">
+                                ⚠️ End &lt; Start
+                              </span>
                             )}
-                          </div>
-                        </td>
+                          </td>
 
-                        {/* 3. Cash End Counter */}
-                        <td className="p-1 border-r border-slate-200">
-                          <div className={`flex items-center gap-1 border rounded-lg px-2 py-1 ${isCashNegative ? 'bg-rose-50 border-rose-300' : 'bg-sky-50/20 border-sky-100'}`}>
-                            <input
-                              type="number"
-                              value={row.endCounter === 0 ? '' : row.endCounter}
-                              onChange={(e) => handleCellChange(index, 'endCounter', e.target.value)}
-                              placeholder="0"
-                              className={`w-full text-right font-black font-mono focus:outline-none text-xs ${isCashNegative ? 'text-rose-700 bg-transparent' : 'text-blue-900 bg-transparent'}`}
+                          {/* 4. Notes */}
+                          <td rowSpan={2} className="p-1.5 border-r border-slate-200 align-middle">
+                            <textarea
+                              value={row.notes}
+                              onChange={(e) => handleCellChange(index, 'note', e.target.value)}
+                              placeholder={lang === 'en' ? 'Notes...' : 'ចំណាំ...'}
+                              rows={2}
+                              className="w-full bg-white text-xs border border-slate-200 p-1.5 rounded-md focus:outline-none focus:border-cyan-500 resize-none overflow-hidden hover:border-slate-350 min-h-[52px] font-sans"
                             />
-                          </div>
-                          {isCashNegative && (
-                            <span className="text-[8px] text-rose-650 bg-rose-100 px-1 py-0.5 rounded font-black uppercase mt-1 block text-center animate-pulse leading-none">
-                              ⚠️ End &lt; Start
-                            </span>
-                          )}
-                        </td>
+                          </td>
 
-                        {/* 4. ABA Start Counter (Editable) */}
-                        <td className="p-1 border-r border-slate-200">
-                          <div className="flex flex-col">
-                            <div className="flex items-center gap-1 rounded-lg px-2 py-1 border border-amber-200 bg-amber-50/10 focus-within:border-amber-400 focus-within:ring-1 focus-within:ring-amber-400">
+                          {/* 5. Cash Revenue */}
+                          <td className={`p-2 border-r border-slate-200 border-b border-slate-200 text-center transition-all ${isCashNegative ? 'bg-rose-50' : 'bg-slate-50/60'}`}>
+                            <span className={`font-black font-mono text-xs block ${isCashNegative ? 'text-rose-600' : 'text-blue-700'}`}>
+                              {row.cash < 0 ? '-' : ''}{formatKHR(Math.abs(row.cash))}
+                            </span>
+                          </td>
+
+                          {/* 6. ABA Revenue (Empty on Sub-row 1) */}
+                          <td className="p-2 border-r border-slate-200 border-b border-slate-200 bg-slate-50/30"></td>
+
+                          {/* 7. Daily Revenue */}
+                          <td rowSpan={2} className="p-2 border-r border-slate-200 text-center bg-cyan-50/70 align-middle">
+                            <span className="font-black font-mono text-xs text-cyan-950 block">
+                              {formatKHR(row.dailyRevenue)}
+                            </span>
+                            <span className="text-[9px] text-cyan-600 block leading-none font-bold mt-0.5">
+                              {formatUSD(row.dailyRevenue)}
+                            </span>
+                          </td>
+
+                          {/* 8. Handover Remaining */}
+                          <td rowSpan={2} className="p-2 border-r border-slate-200 text-center bg-emerald-50/40 align-middle">
+                            <span className="font-black font-mono text-xs text-emerald-800 block">
+                              {formatKHR(row.remainingCash)}
+                            </span>
+                          </td>
+
+                          {/* 9. Actions */}
+                          <td rowSpan={2} className="py-2.5 px-2 text-center bg-slate-50/40 print:hidden align-middle">
+                            <div className="flex flex-col items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => saveRow(index)}
+                                className={`w-full py-1.5 text-[10px] font-black rounded-lg transition-all flex items-center justify-center gap-1 shadow-xs ${
+                                  isDirty 
+                                    ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse' 
+                                    : 'bg-emerald-600 hover:bg-emerald-750 text-white'
+                                }`}
+                              >
+                                <Save className="w-3 h-3" />
+                                {lang === 'en' ? 'Save' : 'រក្សាទុក'}
+                              </button>
+                              <button
+                                onClick={() => triggerTelegramModal(row)}
+                                className="w-full py-1.5 bg-cyan-700 hover:bg-cyan-800 text-white rounded-lg text-[10px] font-black flex items-center justify-center gap-0.5 cursor-pointer"
+                              >
+                                <Send className="w-2.5 h-2.5" />
+                                {lang === 'en' ? 'Telegram' : 'ផ្ញើ'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* Sub-row 2: ABA Counter & ABA Revenue */}
+                        <tr className={`transition-colors border-b border-slate-300 ${isDirty ? 'bg-amber-50/20' : ''} ${isSavedNow ? 'bg-cyan-50/70' : 'bg-white hover:bg-slate-50/40'}`}>
+                          {/* ABA Start Counter */}
+                          <td className="p-1.5 border-r border-slate-200">
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-1 rounded-lg px-2 py-1 border border-amber-200 bg-amber-50/10 focus-within:border-amber-400 focus-within:ring-1 focus-within:ring-amber-400">
+                                <span className="text-[9px] font-bold text-purple-700 uppercase">ABA</span>
+                                <input
+                                  type="number"
+                                  value={row.startCounterAba === 0 ? '' : row.startCounterAba}
+                                  onChange={(e) => handleCellChange(index, 'startCounterAba', e.target.value)}
+                                  placeholder="0"
+                                  className="w-full text-right font-black font-mono focus:outline-none text-xs text-slate-800 bg-transparent"
+                                />
+                              </div>
+                              {prevEndAba > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCellChange(index, 'startCounterAba', prevEndAba)}
+                                  className="text-left text-[9px] text-cyan-600 hover:text-cyan-800 font-bold mt-1 block select-none bg-cyan-50/50 hover:bg-cyan-50 border border-cyan-100 px-1 py-0.5 rounded cursor-pointer transition-colors"
+                                >
+                                  💡 Suggested: {prevEndAba.toLocaleString()}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* ABA End Counter */}
+                          <td className="p-1.5 border-r border-slate-200">
+                            <div className={`flex items-center gap-1 border rounded-lg px-2 py-1 ${isAbaNegative ? 'bg-rose-50 border-rose-300' : 'bg-purple-50/10 border-purple-100'}`}>
+                              <span className="text-[9px] font-bold text-purple-700 uppercase">ABA</span>
                               <input
                                 type="number"
-                                value={row.startCounterAba === 0 ? '' : row.startCounterAba}
-                                onChange={(e) => handleCellChange(index, 'startCounterAba', e.target.value)}
+                                value={row.endCounterAba === 0 ? '' : row.endCounterAba}
+                                onChange={(e) => handleCellChange(index, 'endCounterAba', e.target.value)}
                                 placeholder="0"
-                                className="w-full text-right font-black font-mono focus:outline-none text-xs text-slate-800 bg-transparent"
+                                className={`w-full text-right font-black font-mono focus:outline-none text-xs ${isAbaNegative ? 'text-rose-700 bg-transparent' : 'text-purple-800 bg-transparent'}`}
                               />
                             </div>
-                            {prevEndAba > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => handleCellChange(index, 'startCounterAba', prevEndAba)}
-                                className="text-left text-[9px] text-cyan-600 hover:text-cyan-800 font-bold mt-1 block select-none bg-cyan-50/50 hover:bg-cyan-50 border border-cyan-100 px-1 py-0.5 rounded cursor-pointer transition-colors"
-                                title={lang === 'en' ? "Click to Accept Suggestion" : "ចុចដើម្បីព្រមទទួលយក"}
-                              >
-                                💡 Suggested: {prevEndAba.toLocaleString()}
-                              </button>
+                            {isAbaNegative && (
+                              <span className="text-[8px] text-rose-650 bg-rose-100 px-1 py-0.5 rounded font-black uppercase mt-1 block text-center animate-pulse leading-none">
+                                ⚠️ End &lt; Start
+                              </span>
                             )}
-                          </div>
-                        </td>
+                          </td>
 
-                        {/* 5. ABA End Counter */}
-                        <td className="p-1 border-r border-slate-200">
-                          <div className={`flex items-center gap-1 border rounded-lg px-2 py-1 ${isAbaNegative ? 'bg-rose-50 border-rose-300' : 'bg-purple-50/10 border-purple-100'}`}>
-                            <input
-                              type="number"
-                              value={row.endCounterAba === 0 ? '' : row.endCounterAba}
-                              onChange={(e) => handleCellChange(index, 'endCounterAba', e.target.value)}
-                              placeholder="0"
-                              className={`w-full text-right font-black font-mono focus:outline-none text-xs ${isAbaNegative ? 'text-rose-700 bg-transparent' : 'text-purple-800 bg-transparent'}`}
-                            />
-                          </div>
-                          {isAbaNegative && (
-                            <span className="text-[8px] text-rose-650 bg-rose-100 px-1 py-0.5 rounded font-black uppercase mt-1 block text-center animate-pulse leading-none">
-                              ⚠️ End &lt; Start
+                          {/* Cash Revenue (Empty on Sub-row 2) */}
+                          <td className="p-2 border-r border-slate-200 bg-slate-50/30"></td>
+
+                          {/* ABA Revenue */}
+                          <td className={`p-2 border-r border-slate-200 text-center transition-all ${isAbaNegative ? 'bg-rose-50' : 'bg-slate-50/60'}`}>
+                            <span className={`font-black font-mono text-xs block ${isAbaNegative ? 'text-rose-600' : 'text-purple-800'}`}>
+                              {row.aba < 0 ? '-' : ''}{formatKHR(Math.abs(row.aba))}
                             </span>
-                          )}
-                        </td>
-
-                        {/* 6. Notes */}
-                        <td className="p-1 border-r border-slate-200">
-                          <textarea
-                            value={row.note}
-                            onChange={(e) => handleCellChange(index, 'note', e.target.value)}
-                            placeholder={lang === 'en' ? 'Notes...' : 'ចំណាំ...'}
-                            rows={1}
-                            className="w-full bg-white text-xs border border-slate-200 p-1 rounded-md focus:outline-none focus:border-cyan-500 resize-none overflow-hidden hover:border-slate-350 min-h-[32px] font-sans"
-                          />
-                        </td>
-
-                        {/* 7. Cash Revenue */}
-                        <td className={`p-2 border-r border-slate-200 text-center transition-all ${isCashNegative ? 'bg-rose-50' : 'bg-slate-50/60'}`}>
-                          <span className={`font-black font-mono text-xs block ${isCashNegative ? 'text-rose-600' : 'text-emerald-800'}`}>
-                            {row.cash < 0 ? '-' : ''}{formatKHR(Math.abs(row.cash))}
-                          </span>
-                        </td>
-
-                        {/* 8. ABA Revenue */}
-                        <td className={`p-2 border-r border-slate-200 text-center transition-all ${isAbaNegative ? 'bg-rose-50' : 'bg-slate-50/60'}`}>
-                          <span className={`font-black font-mono text-xs block ${isAbaNegative ? 'text-rose-600' : 'text-purple-800'}`}>
-                            {row.aba < 0 ? '-' : ''}{formatKHR(Math.abs(row.aba))}
-                          </span>
-                        </td>
-
-                        {/* 9. Daily Revenue */}
-                        <td className="p-2 border-r border-slate-200 text-center bg-cyan-50/70">
-                          <span className="font-black font-mono text-xs text-cyan-950 block">
-                            {formatKHR(row.dailyRevenue)}
-                          </span>
-                          <span className="text-[9px] text-cyan-600 block leading-none font-bold mt-0.5">
-                            {formatUSD(row.dailyRevenue)}
-                          </span>
-                        </td>
-
-                        {/* 10. Actions */}
-                        <td className="py-2.5 px-2 text-center bg-slate-50/40 print:hidden">
-                          <div className="flex flex-col items-center justify-center gap-1.5">
-                            <button
-                              onClick={() => saveRow(index)}
-                              className={`w-full py-1 text-[10px] font-black rounded-lg transition-all flex items-center justify-center gap-1 shadow-xs ${
-                                isDirty 
-                                  ? 'bg-amber-500 hover:bg-amber-600 text-white animate-pulse' 
-                                  : 'bg-emerald-600 hover:bg-emerald-750 text-white'
-                              }`}
-                            >
-                              <Save className="w-3 h-3" />
-                              {lang === 'en' ? 'Save' : 'រក្សាទុក'}
-                            </button>
-                            <button
-                              onClick={() => triggerTelegramModal(row)}
-                              className="w-full py-1 bg-cyan-700 hover:bg-cyan-800 text-white rounded-lg text-[10px] font-black flex items-center justify-center gap-0.5"
-                            >
-                              <Send className="w-2.5 h-2.5" />
-                              {lang === 'en' ? 'Telegram' : 'ផ្ញើ'}
-                            </button>
-                          </div>
-                        </td>
-
-                      </tr>
+                          </td>
+                        </tr>
+                      </React.Fragment>
                     );
                   })}
 
@@ -1155,7 +1171,7 @@ export default function RevenueRecordsView({
                     <td className="py-3 px-2 text-center border-r border-cyan-800 uppercase tracking-widest font-black">
                       {lang === 'en' ? 'Totals:' : 'សរុបប្រចាំខែ:'}
                     </td>
-                    <td colSpan={5} className="py-3 px-2 text-left border-r border-cyan-800 font-sans italic text-cyan-200 text-[10px]">
+                    <td colSpan={3} className="py-3 px-2 text-left border-r border-cyan-800 font-sans italic text-cyan-200 text-[10px]">
                       {lang === 'en' ? 'Monthly Carry-Forward Aggregation Summary:' : 'ផលបូកសរុបប្រចាំខែជាក់ស្ដែង:'}
                     </td>
                     <td className="py-3 px-2 text-right border-r border-cyan-800 bg-cyan-800 font-mono text-xs">
@@ -1164,8 +1180,11 @@ export default function RevenueRecordsView({
                     <td className="py-3 px-2 text-right border-r border-cyan-800 bg-cyan-800 font-mono text-xs">
                       {formatKHR(processedRows.reduce((a, b) => a + (b.aba || 0), 0))}
                     </td>
-                    <td className="py-3 px-2 text-center border-r-2 border-cyan-800 bg-cyan-900 font-mono text-sm font-black text-emerald-100">
+                    <td className="py-3 px-2 text-center border-r border-cyan-800 bg-cyan-900 font-mono text-sm font-black text-emerald-100">
                       {formatKHR(processedRows.reduce((a, b) => a + (b.dailyRevenue || 0), 0))}
+                    </td>
+                    <td className="py-3 px-2 text-right border-r border-cyan-800 bg-emerald-900 font-mono text-xs text-white">
+                      {formatKHR(processedRows.reduce((a, b) => a + (b.remainingCash || 0), 0))}
                     </td>
                     <td className="py-3 px-2 italic font-semibold text-cyan-100 text-[10px] print:hidden">
                       {lang === 'en' ? 'Month Summary' : 'សង្ខេប'}
