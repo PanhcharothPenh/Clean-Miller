@@ -1258,18 +1258,7 @@ export default function DetergentRecordsView({
 
             {/* Printable Container Body */}
             <div className="flex-1 overflow-y-auto p-8 print:p-0" id="paper-form-printing-container">
-              <div className="w-full bg-white text-[#111827] mx-auto relative antialiased border-[6px] border-double border-sky-600 rounded-3xl p-8 max-w-[800px] print:border-none print:p-3 overflow-hidden">
-                {/* Blue corner wave decorations */}
-                <div className="absolute top-0 left-0 w-24 h-24 pointer-events-none opacity-10">
-                  <svg viewBox="0 0 100 100" fill="none" className="text-sky-600 w-full h-full">
-                    <path d="M0 0 C 40 10, 60 40, 100 100 L 0 100 Z" fill="currentColor" />
-                  </svg>
-                </div>
-                <div className="absolute top-0 right-0 w-32 h-32 pointer-events-none opacity-10">
-                  <svg viewBox="0 0 100 100" fill="none" className="text-sky-600 w-full h-full">
-                    <path d="M100 0 C 60 10, 40 40, 0 100 L 100 100 Z" fill="currentColor" />
-                  </svg>
-                </div>
+              <div className="w-full bg-white text-[#111827] mx-auto relative antialiased rounded-3xl p-8 max-w-[800px] print:p-3 overflow-hidden">
                 
                 {/* Photo Header block */}
                 <div className="text-center font-sans relative z-10">
