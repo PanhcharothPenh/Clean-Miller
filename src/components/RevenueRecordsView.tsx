@@ -1484,11 +1484,11 @@ Date: ${telegramModalRow.label}`}
       </div>
 
       {/* ====================================================
-          PDF PRINT & PREVIEW INTERACTIVE MODAL (HIGH FIDELITY A4)
+          PDF PRINT & PREVIEW INTERACTIVE MODAL (EXACT PHYSICAL FORM MATCH)
           ==================================================== */}
       {isPdfModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in print:hidden" id="pdf_preview_modal">
-          <div className="bg-white rounded-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden border border-slate-200/80 shadow-2xl animate-slide-up">
+          <div className="bg-white rounded-2xl w-full max-w-5xl h-[92vh] flex flex-col overflow-hidden border border-slate-200/80 shadow-2xl animate-slide-up">
             
             {/* Modal Heading Toolbar */}
             <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
@@ -1561,81 +1561,98 @@ Date: ${telegramModalRow.label}`}
             <div className="flex-1 bg-slate-200/70 p-4 md:p-6 overflow-y-auto">
               <div 
                 id="revenue-pdf-printable-area" 
-                className={`bg-white mx-auto p-6 md:p-8 rounded-xl shadow-lg border border-slate-200/80 font-sans text-slate-800 transition-all ${pdfOrientation === "landscape" ? "max-w-[297mm]" : "max-w-[210mm]"}`}
+                className={`bg-white mx-auto p-5 md:p-7 rounded-xl shadow-lg border border-slate-200/80 font-sans text-slate-800 transition-all ${
+                  pdfOrientation === 'landscape' ? 'max-w-[297mm]' : 'max-w-[210mm]'
+                }`}
                 style={{ minHeight: '297mm' }}
               >
-                {/* Print Document Header */}
-                <div className="flex items-center justify-between border-b-2 border-cyan-600 pb-4 mb-4">
-                  <div className="flex items-center gap-3">
-                    <Clean24Logo className="h-9 cursor-pointer" lightMode={true} />
-                    <div>
-                      <h1 className="text-base font-black uppercase text-cyan-900 tracking-wide">
-                        CLEAN24 DAILY REVENUE STATEMENT
-                      </h1>
-                      <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">
-                        PHNOM PENH, KINGDOM OF CAMBODIA
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-xs font-black text-cyan-800 uppercase block">
-                      📍 {selectedBranchName}
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-600 block mt-0.5">
-                      🗓️ {getMonthAbbr(selectedMonth)} {selectedYear}
-                    </span>
-                  </div>
+                {/* 1. Official Banner Header (Matching Photo 1:1) */}
+                <div className="bg-cyan-600 text-white font-black text-center py-2 uppercase text-sm tracking-widest border border-cyan-700 rounded-t-lg">
+                  Revenue Clean Wash and Dry
+                </div>
+                <div className="bg-slate-100 text-slate-800 font-extrabold text-center py-1.5 text-xs border-x border-b border-slate-300 rounded-b-lg mb-3">
+                  តារាងកុងទ័រម៉ាស៊ីនបោក ({selectedBranchName} - {getMonthAbbr(selectedMonth)} {selectedYear})
                 </div>
 
-
-
-                {/* Printable Table */}
+                {/* 2. Printable Table (Matching Physical Form Columns 1-9 Exactly) */}
                 <table className="w-full text-left border-collapse border border-slate-300">
                   <thead>
-                    <tr className="bg-cyan-700 text-white text-center font-bold text-[10px] uppercase">
-                      <th className="py-1.5 px-1 border border-cyan-800">Date</th>
-                      <th className="py-1.5 px-1 border border-cyan-800">Start Counter</th>
-                      <th className="py-1.5 px-1 border border-cyan-800">End Counter</th>
-                      <th className="py-1.5 px-1 border border-cyan-800">Cash In</th>
-                      <th className="py-1.5 px-1 border border-cyan-800">ABA In</th>
-                      <th className="py-1.5 px-1 border border-cyan-800">Daily Total</th>
-                      <th className="py-1.5 px-1 border border-cyan-800">Note</th>
+                    <tr className="bg-slate-200/80 text-slate-900 text-center font-extrabold text-[9.5px] border-b border-slate-300 uppercase">
+                      <th className="py-2 px-1 border-r border-slate-300 w-[75px]">ថ្ងៃ/ម៉ោង</th>
+                      <th className="py-2 px-1 border-r border-slate-300 w-[95px]">កុងទ័រចាប់ផ្តើម</th>
+                      <th className="py-2 px-1 border-r border-slate-300 w-[95px]">កុងទ័របញ្ចប់</th>
+                      <th className="py-2 px-1 border-r border-slate-300 max-w-[100px]">ចំណាំ</th>
+                      <th className="py-2 px-1 border-r border-slate-300 w-[85px]">លុយសុទ្ធ</th>
+                      <th className="py-2 px-1 border-r border-slate-300 w-[85px]">ABA</th>
+                      <th className="py-2 px-1 border-r border-slate-300 w-[95px]">លុយសរុបប្រចាំថ្ងៃ</th>
+                      <th className="py-2 px-1 border-r border-slate-300 w-[85px]">ចូលធនាគារ</th>
+                      <th className="py-2 px-1 w-[85px]">ទទួល</th>
                     </tr>
                   </thead>
-                  <tbody className="text-[10px] font-mono border-t border-slate-300">
+                  <tbody className="text-[9.5px] font-mono divide-y divide-slate-300">
                     {processedRows.map((r, i) => (
-                      <React.Fragment key={i}>
-                        {/* Line 1: Cash Counter & Cash Difference */}
-                        <tr className="hover:bg-slate-50 border-t border-slate-300">
-                          <td rowSpan={2} className="py-1 px-1.5 text-center font-sans font-bold text-slate-800 border-r border-slate-300 align-middle bg-slate-50/40">
-                            {r.label}<br/><span className="text-[8px] font-mono text-slate-400 font-normal">{r.time || '10:30'}</span>
-                          </td>
-                          <td className="py-0.5 px-1.5 text-right font-mono text-slate-800 border-r border-slate-200">{r.startCounter > 0 ? r.startCounter.toLocaleString() : ''}</td>
-                          <td className="py-0.5 px-1.5 text-right font-mono text-slate-800 border-r border-slate-300">{r.endCounter > 0 ? r.endCounter.toLocaleString() : ''}</td>
-                          <td className="py-0.5 px-1.5 text-right font-bold text-blue-700 border-r border-slate-300">{r.cash > 0 ? formatKHR(r.cash) : ''}</td>
-                          <td className="py-0.5 px-1.5 text-right font-bold text-purple-700 border-r border-slate-300"></td>
-                          <td rowSpan={2} className="py-1 px-1.5 text-right font-extrabold text-cyan-950 bg-cyan-50/50 border-r border-slate-300 align-middle text-[11px]">{r.dailyRevenue > 0 ? formatKHR(r.dailyRevenue) : ''}</td>
-                          <td rowSpan={2} className="py-1 px-1.5 text-left font-sans text-slate-600 text-[9px] truncate max-w-[130px] align-middle">{r.notes || ''}</td>
-                        </tr>
-                        {/* Line 2: ABA Counter & ABA Difference */}
-                        <tr className="hover:bg-slate-50 border-b border-slate-300">
-                          <td className="py-0.5 px-1.5 text-right font-mono text-slate-600 border-r border-slate-200 bg-slate-50/30">{r.startCounterAba > 0 ? r.startCounterAba.toLocaleString() : ''}</td>
-                          <td className="py-0.5 px-1.5 text-right font-mono text-slate-600 border-r border-slate-300 bg-slate-50/30">{r.endCounterAba > 0 ? r.endCounterAba.toLocaleString() : ''}</td>
-                          <td className="py-0.5 px-1.5 text-right font-bold text-blue-700 border-r border-slate-300"></td>
-                          <td className="py-0.5 px-1.5 text-right font-bold text-purple-700 border-r border-slate-300">{r.aba > 0 ? formatKHR(r.aba) : ''}</td>
-                        </tr>
-                      </React.Fragment>
+                      <tr key={i} className="hover:bg-slate-50" style={{ height: '24px' }}>
+                        {/* 1. Date/Time */}
+                        <td className="py-0.5 px-1 text-center font-sans font-bold text-slate-800 border-r border-slate-300 bg-slate-50/40 text-[9px]">
+                          <span className="block font-bold">{r.label}</span>
+                          <span className="block text-[8px] font-mono text-slate-400 font-normal">{r.time || '10:30'}</span>
+                        </td>
+
+                        {/* 2. Start Counter (2 Stacked Lines: Top = Cash, Bottom = ABA) */}
+                        <td className="py-0.5 px-1 text-right font-mono border-r border-slate-300 leading-tight">
+                          <div className="text-slate-800 font-bold">{r.startCounter > 0 ? r.startCounter.toLocaleString() : ''}</div>
+                          <div className="text-slate-600 font-semibold text-[8.5px]">{r.startCounterAba > 0 ? r.startCounterAba.toLocaleString() : ''}</div>
+                        </td>
+
+                        {/* 3. End Counter (2 Stacked Lines: Top = Cash, Bottom = ABA) */}
+                        <td className="py-0.5 px-1 text-right font-mono border-r border-slate-300 leading-tight">
+                          <div className="text-slate-800 font-bold">{r.endCounter > 0 ? r.endCounter.toLocaleString() : ''}</div>
+                          <div className="text-slate-600 font-semibold text-[8.5px]">{r.endCounterAba > 0 ? r.endCounterAba.toLocaleString() : ''}</div>
+                        </td>
+
+                        {/* 4. Note (ចំណាំ) */}
+                        <td className="py-0.5 px-1 text-left font-sans text-slate-700 text-[8.5px] border-r border-slate-300 max-w-[100px] truncate leading-tight">
+                          {r.notes || ''}
+                        </td>
+
+                        {/* 5. Cash Amount (លុយសុទ្ធ) */}
+                        <td className="py-0.5 px-1 text-right font-mono font-bold text-blue-700 border-r border-slate-300 align-top text-[9px]">
+                          {r.cash > 0 ? formatKHR(r.cash) : ''}
+                        </td>
+
+                        {/* 6. ABA Amount (ABA) */}
+                        <td className="py-0.5 px-1 text-right font-mono font-bold text-purple-700 border-r border-slate-300 align-bottom text-[9px]">
+                          {r.aba > 0 ? formatKHR(r.aba) : ''}
+                        </td>
+
+                        {/* 7. Daily Total (លុយសរុបប្រចាំថ្ងៃ) */}
+                        <td className="py-0.5 px-1 text-right font-mono font-extrabold text-cyan-950 bg-cyan-50/40 border-r border-slate-300 align-middle text-[9.5px]">
+                          {r.dailyRevenue > 0 ? formatKHR(r.dailyRevenue) : ''}
+                        </td>
+
+                        {/* 8. Bank Deposit (ចូលធនាគារ) */}
+                        <td className="py-0.5 px-1 text-right font-mono font-bold text-amber-800 border-r border-slate-300 align-middle text-[9px]">
+                          {r.bankDeposit > 0 ? formatKHR(r.bankDeposit) : ''}
+                        </td>
+
+                        {/* 9. Received / Handover (ទទួល) */}
+                        <td className="py-0.5 px-1 text-right font-mono font-bold text-emerald-800 align-middle text-[9px]">
+                          {r.remainingCash > 0 ? formatKHR(r.remainingCash) : ''}
+                        </td>
+                      </tr>
                     ))}
+
                     {/* Summary Footer Row */}
-                    <tr className="bg-cyan-700 text-white font-extrabold text-[11px] border-t-2 border-cyan-800">
-                      <td className="py-2 px-1.5 text-center font-black">TOTAL:</td>
-                      <td className="py-2 px-1.5 text-center font-mono text-[9px] font-normal text-cyan-200">-</td>
-                      <td className="py-2 px-1.5 text-center font-mono text-[9px] font-normal text-cyan-200">-</td>
-                      <td className="py-2 px-1.5 text-right">{formatKHR(sumCash)}</td>
-                      <td className="py-2 px-1.5 text-right">{formatKHR(sumAba)}</td>
-                      <td className="py-2 px-1.5 text-right bg-cyan-900 text-white">{formatKHR(sumRevenue)}</td>
-                      <td className="py-2 px-1.5 text-center font-sans text-[9px]">Verified Report</td>
+                    <tr className="bg-cyan-700 text-white font-extrabold text-[10px] border-t-2 border-cyan-800">
+                      <td className="py-1.5 px-1 text-center font-black">TOTAL:</td>
+                      <td className="py-1.5 px-1 text-center font-mono text-[8.5px] font-normal text-cyan-100">-</td>
+                      <td className="py-1.5 px-1 text-center font-mono text-[8.5px] font-normal text-cyan-100">-</td>
+                      <td className="py-1.5 px-1 text-center font-sans text-[8.5px] font-normal text-cyan-100">Summary</td>
+                      <td className="py-1.5 px-1 text-right">{formatKHR(sumCash)}</td>
+                      <td className="py-1.5 px-1 text-right">{formatKHR(sumAba)}</td>
+                      <td className="py-1.5 px-1 text-right bg-cyan-900 text-white text-[10.5px]">{formatKHR(sumRevenue)}</td>
+                      <td className="py-1.5 px-1 text-right text-amber-200">{formatKHR(sumBankDeposit)}</td>
+                      <td className="py-1.5 px-1 text-right text-emerald-200">{formatKHR(sumRemaining)}</td>
                     </tr>
                   </tbody>
                 </table>
