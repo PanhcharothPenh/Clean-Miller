@@ -1597,8 +1597,7 @@ Date: ${telegramModalRow.label}`}
                       <th className="py-1.5 px-1 border border-cyan-800">Date</th>
                       <th className="py-1.5 px-1 border border-cyan-800">Cash In</th>
                       <th className="py-1.5 px-1 border border-cyan-800">ABA In</th>
-                      <th className="py-1.5 px-1 border border-cyan-800">Bank Deposit</th>
-                      <th className="py-1.5 px-1 border border-cyan-800">Daily Total</th>
+                                            <th className="py-1.5 px-1 border border-cyan-800">Daily Total</th>
                       <th className="py-1.5 px-1 border border-cyan-800">Note</th>
                     </tr>
                   </thead>
@@ -1608,8 +1607,7 @@ Date: ${telegramModalRow.label}`}
                         <td className="py-1 px-1.5 text-center font-sans font-bold text-slate-800 border-r border-slate-300">{r.label}</td>
                         <td className="py-1 px-1.5 text-right text-blue-700 font-bold border-r border-slate-300">{r.cash > 0 ? formatKHR(r.cash) : ''}</td>
                         <td className="py-1 px-1.5 text-right text-purple-700 font-bold border-r border-slate-300">{r.aba > 0 ? formatKHR(r.aba) : ''}</td>
-                        <td className="py-1 px-1.5 text-right text-amber-700 font-bold border-r border-slate-300">{r.bankDeposit > 0 ? formatKHR(r.bankDeposit) : ''}</td>
-                        <td className="py-1 px-1.5 text-right font-extrabold text-cyan-900 bg-cyan-50/40 border-r border-slate-300">{r.dailyRevenue > 0 ? formatKHR(r.dailyRevenue) : ''}</td>
+                                                <td className="py-1 px-1.5 text-right font-extrabold text-cyan-900 bg-cyan-50/40 border-r border-slate-300">{r.dailyRevenue > 0 ? formatKHR(r.dailyRevenue) : ''}</td>
                         <td className="py-1 px-1.5 text-left font-sans text-slate-600 text-[9px] truncate max-w-[150px]">{r.notes || ''}</td>
                       </tr>
                     ))}
@@ -1618,8 +1616,7 @@ Date: ${telegramModalRow.label}`}
                       <td className="py-2 px-1.5 text-center font-black">TOTAL:</td>
                       <td className="py-2 px-1.5 text-right">{formatKHR(sumCash)}</td>
                       <td className="py-2 px-1.5 text-right">{formatKHR(sumAba)}</td>
-                      <td className="py-2 px-1.5 text-right">{formatKHR(sumBankDeposit)}</td>
-                      <td className="py-2 px-1.5 text-right bg-cyan-900 text-white">{formatKHR(sumRevenue)}</td>
+                                            <td className="py-2 px-1.5 text-right bg-cyan-900 text-white">{formatKHR(sumRevenue)}</td>
                       <td className="py-2 px-1.5 text-center font-sans text-[9px]">Verified Report</td>
                     </tr>
                   </tbody>
