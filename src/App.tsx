@@ -68,7 +68,7 @@ import ReportsView from './components/ReportsView';
 import UserManagementView from './components/UserManagementView';
 import SettingsView from './components/SettingsView';
 import TelegramLogin from './components/TelegramLogin';
-import { authApi } from './utils/api';
+import { authApi, getSavedSessionUser, saveSession } from './utils/api';
 
 // 6 New Submodules Imported Here
 import CoinTransactionsView from './components/CoinTransactionsView';
@@ -155,20 +155,36 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Check user authentication session on mount
+  // Check user authentication session on mount (Instant Cache + Background Verification)
   useEffect(() => {
     let active = true;
+
+    // Instant zero-delay load from localStorage cache if available
+    const cachedUser = getSavedSessionUser();
+    if (cachedUser && active) {
+      setAuthenticatedUser(cachedUser);
+      setCurrentRole(cachedUser.role);
+      setActiveBranchId(cachedUser.assignedBranchIds && cachedUser.assignedBranchIds.length > 0 ? cachedUser.assignedBranchIds[0] : 'all');
+      setAuthChecking(false);
+    }
+
     const checkSession = async () => {
       try {
-        const user = await authApi.getMe();
+        const fetchPromise = authApi.getMe();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session check timeout')), 1200)
+        );
+
+        const user = await Promise.race([fetchPromise, timeoutPromise]) as any;
+
         if (active && user) {
           setAuthenticatedUser(user);
           setCurrentRole(user.role);
           setActiveBranchId(user.assignedBranchIds && user.assignedBranchIds.length > 0 ? user.assignedBranchIds[0] : 'all');
-          handleAddNewAuditLog(`Authenticated session recovered successfully for: [${user.fullName}]`);
+          saveSession(localStorage.getItem('clean24_access_token') || '', localStorage.getItem('clean24_refresh_token') || '', user);
         }
       } catch (err) {
-        // No session exists, show login screen cleanly
+        // If network failed/timed out, but no cached user exists, clear loading state
       } finally {
         if (active) setAuthChecking(false);
       }
