@@ -802,16 +802,7 @@ export default function DetergentRecordsView({
             </select>
           </div>
 
-          {/* Opening Balance (Customizable startup) */}
-          <div className="flex flex-col gap-1 min-w-[120px]">
-            <span className="text-[10px] text-slate-400 font-bold uppercase">{lang === 'en' ? 'Opening Balance' : 'សមតុល្យដើមគ្រា'}</span>
-            <input
-              type="number"
-              value={openingBalance}
-              onChange={(e) => setOpeningBalance(Math.max(0, parseInt(e.target.value) || 0))}
-              className="px-3 py-1.5 bg-sky-50/50 hover:bg-sky-50 border border-sky-100 rounded-xl text-slate-800 text-xs font-bold text-center focus:outline-none focus:ring-1 focus:ring-pink-500"
-            />
-          </div>
+
         </div>
 
         {/* Sync panel indicators & Action Buttons */}
