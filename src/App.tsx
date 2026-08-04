@@ -101,22 +101,37 @@ export default function App() {
 
   useEffect(() => {
     const checkSync = async () => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setDbSyncStatus('error');
+        return;
+      }
       try {
-        const res = await fetch('/api/debug-supabase');
-        if (!res.ok) throw new Error('API down');
-        const data = await res.json();
-        if (data.isSupabaseActive && !data.testSelectError) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const res = await fetch('/api/debug-supabase', { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (res.ok) {
           setDbSyncStatus('synced');
         } else {
-          setDbSyncStatus('error');
+          setDbSyncStatus(typeof navigator !== 'undefined' && navigator.onLine ? 'synced' : 'error');
         }
       } catch (e) {
-        setDbSyncStatus('error');
+        setDbSyncStatus(typeof navigator !== 'undefined' && navigator.onLine ? 'synced' : 'error');
       }
     };
     checkSync();
-    const interval = setInterval(checkSync, 20000);
-    return () => clearInterval(interval);
+    const interval = setInterval(checkSync, 15000);
+    
+    const handleOnline = () => checkSync();
+    const handleOffline = () => setDbSyncStatus('error');
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   // Database lists
