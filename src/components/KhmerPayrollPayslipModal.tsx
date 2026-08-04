@@ -88,10 +88,10 @@ export default function KhmerPayrollPayslipModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto no-print">
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto">
       <div className="max-w-lg w-full">
         {/* Quick actions top bar */}
-        <div className="flex flex-wrap justify-end gap-2 mb-4">
+        <div className="flex flex-wrap justify-end gap-2 mb-4 print:hidden">
           <button 
             onClick={onClose} 
             className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-all cursor-pointer mr-auto"

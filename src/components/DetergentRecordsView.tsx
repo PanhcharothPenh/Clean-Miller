@@ -629,7 +629,14 @@ export default function DetergentRecordsView({
   };
 
   const handlePrint = () => {
-    window.print();
+    if (!isPreviewOpen) {
+      setIsPreviewOpen(true);
+      setTimeout(() => {
+        window.print();
+      }, 300);
+    } else {
+      window.print();
+    }
   };
 
   // ----------------------------------------------------
@@ -1396,11 +1403,7 @@ export default function DetergentRecordsView({
                 <Printer className="w-4 h-4" />
                 {lang === 'en' ? 'Print Sheet' : 'បោះពុម្ភ'}
               </button>
-            </div>
 
-          </div>
-        </div>
-      )}
 
       {/* Embedded Stylesheet override for exact paper form-printing container rendering */}
       <style>{`
@@ -1464,6 +1467,11 @@ export default function DetergentRecordsView({
           }
         }
       `}</style>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

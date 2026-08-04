@@ -504,7 +504,14 @@ export default function SoftenerRecordsView({
   };
 
   const handlePrint = () => {
-    window.print();
+    if (!isPreviewOpen) {
+      setIsPreviewOpen(true);
+      setTimeout(() => {
+        window.print();
+      }, 300);
+    } else {
+      window.print();
+    }
   };
 
   // ----------------------------------------------------
@@ -1309,11 +1316,7 @@ export default function SoftenerRecordsView({
                 <Printer className="w-4 h-4" />
                 {lang === 'en' ? 'Print Sheet' : 'បោះពុម្ព'}
               </button>
-            </div>
 
-          </div>
-        </div>
-      )}
 
       {/* Hidden print styling stylesheet to ensure 100% paper representation */}
       <style>{`
@@ -1377,6 +1380,11 @@ export default function SoftenerRecordsView({
           }
         }
       `}</style>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }

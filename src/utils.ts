@@ -79,70 +79,76 @@ export function exportToCSV(filename: string, headers: string[], rows: any[][]) 
 
 // Helper to trigger browser printing of a specific element id
 export function printElement(elementId: string, title: string) {
-  const printContents = document.getElementById(elementId)?.innerHTML;
-  if (!printContents) return;
+  const element = document.getElementById(elementId);
+  if (!element) return;
   
-  const originalContents = document.body.innerHTML;
-  
-  // Create printing window layout
-  const printWindow = window.open('', '_blank');
+  const printWindow = window.open('', '_blank', 'width=900,height=700');
   if (printWindow) {
     printWindow.document.write(`
+      <!DOCTYPE html>
       <html>
         <head>
           <title>${title}</title>
           <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@400;500;600;700&display=swap">
           <style>
+            * { box-sizing: border-box; }
             body {
               font-family: 'Kantumruy Pro', system-ui, sans-serif;
-              padding: 40px;
-              line-height: 1.5;
-              color: #1e293b;
+              padding: 24px;
+              margin: 0;
+              background: #ffffff;
+              color: #0f172a;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
             table {
               width: 100%;
               border-collapse: collapse;
-              margin-top: 20px;
-              margin-bottom: 20px;
+              margin-top: 16px;
+              margin-bottom: 16px;
             }
             th, td {
-              border: 1px solid #e2e8f0;
-              padding: 10px;
+              border: 1px solid #cbd5e1;
+              padding: 8px 12px;
               text-align: left;
-              font-size: 13px;
+              font-size: 12px;
             }
             th {
               background-color: #f1f5f9;
+              font-weight: 700;
             }
-            h1 { font-size: 24px; color: #0f172a; margin-bottom: 5px; }
-            h2 { font-size: 16px; color: #475569; margin-top: 0; }
-            .totals {
-              margin-top: 30px;
-              text-align: right;
-              font-weight: bold;
-              font-size: 16px;
-            }
+            h1 { font-size: 20px; color: #0f172a; margin: 0 0 4px 0; }
+            h2 { font-size: 14px; color: #475569; margin: 0; font-weight: 500; }
             .header-info {
               display: flex;
               justify-content: space-between;
+              align-items: center;
               border-bottom: 2px solid #e2e8f0;
-              padding-bottom: 15px;
-              margin-bottom: 20px;
+              padding-bottom: 12px;
+              margin-bottom: 16px;
             }
           </style>
         </head>
-        <body onload="window.print();window.close()">
+        <body>
           <div class="header-info">
             <div>
               <h1>Clean24 Laundry</h1>
               <h2>${title}</h2>
             </div>
-            <div style="text-align: right; font-size: 12px; color: #64748b;">
+            <div style="text-align: right; font-size: 11px; color: #64748b;">
               <strong>Printed On:</strong> ${new Date().toLocaleString()}<br>
-              <strong>Status:</strong> Valid / Official Report
+              <strong>Status:</strong> Official Report
             </div>
           </div>
-          ${printContents}
+          ${element.innerHTML}
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 250);
+            };
+          </script>
         </body>
       </html>
     `);
