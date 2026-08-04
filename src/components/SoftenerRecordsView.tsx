@@ -692,12 +692,59 @@ export default function SoftenerRecordsView({
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-pink-500"
+              className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-sky-500"
             >
               {years.map(yr => (
                 <option key={yr} value={yr}>{yr}</option>
               ))}
             </select>
+          </div>
+
+          {/* Softener Brand Selector (Comfort, Ora, Siusip, Custom) */}
+          <div className="flex flex-col gap-1 min-w-[140px]">
+            <span className="text-[10px] text-sky-600 font-bold uppercase tracking-wider flex items-center gap-1">
+              🌸 {lang === 'en' ? 'Softener Brand' : 'ម៉ាកទឹកក្រអូប'}
+            </span>
+            {!isCustomBrand ? (
+              <select
+                value={['Comfort', 'Ora', 'Siusip'].includes(selectedBrand) ? selectedBrand : 'CUSTOM_ACTIVE'}
+                onChange={(e) => handleBrandChange(e.target.value)}
+                className="px-3 py-1.5 bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-900 text-xs font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400"
+              >
+                <option value="Comfort">Comfort</option>
+                <option value="Ora">Ora</option>
+                <option value="Siusip">Siusip</option>
+                {!['Comfort', 'Ora', 'Siusip'].includes(selectedBrand) && (
+                  <option value="CUSTOM_ACTIVE">{selectedBrand} (Custom)</option>
+                )}
+                <option value="CUSTOM">+ {lang === 'en' ? 'Custom Brand...' : 'បន្ថែមម៉ាកផ្សេងៗ...'}</option>
+              </select>
+            ) : (
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  placeholder="e.g. Downy, Hygiene"
+                  value={customBrandInput}
+                  onChange={(e) => setCustomBrandInput(e.target.value)}
+                  className="px-2.5 py-1 bg-white border border-sky-300 text-xs font-bold rounded-lg text-slate-800 focus:outline-none w-28"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={handleCustomBrandSubmit}
+                  className="px-2 py-1 bg-sky-600 hover:bg-sky-700 text-white text-xs font-black rounded-lg"
+                >
+                  ✓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCustomBrand(false)}
+                  className="px-1.5 py-1 bg-slate-200 text-slate-600 text-xs rounded-lg font-bold"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1252,8 +1299,11 @@ export default function SoftenerRecordsView({
                 {/* Photo Header block */}
                 <div className="text-center font-sans relative z-10">
                   {/* Category Title centered with diamond */}
-                  <h1 className="text-3xl font-black text-sky-800 tracking-wider font-sans mb-1">
+                  <h1 className="text-3xl font-black text-sky-800 tracking-wider font-sans mb-1 flex items-center justify-center gap-2">
                     {lang === 'en' ? 'FABRIC SOFTENER' : 'ទឹកក្រអូប'}
+                    <span className="text-sm font-extrabold px-2.5 py-0.5 bg-sky-100 text-sky-800 rounded-full border border-sky-200">
+                      🌸 {selectedBrand}
+                    </span>
                   </h1>
                   <div className="flex items-center justify-center gap-4 max-w-[280px] mx-auto">
                     <div className="h-[1.5px] bg-sky-600 flex-1" />
