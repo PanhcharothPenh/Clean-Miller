@@ -267,11 +267,12 @@ export default function DetergentRecordsView({
   const sumInQty = useMemo(() => localRows.reduce((a, b) => a + (b.inQty || 0), 0), [localRows]);
   const sumOutQty = useMemo(() => localRows.reduce((a, b) => a + (b.outQty || 0), 0), [localRows]);
   
-  // Final running balance at the end of the month
+  // Final running balance at the end of the month (0 if no activity)
   const finalBalance = useMemo(() => {
-    if (localRowsWithBalance.length === 0) return openingBalance;
-    return localRowsWithBalance[localRowsWithBalance.length - 1].balance;
-  }, [localRowsWithBalance, openingBalance]);
+    if (sumInQty === 0 && sumOutQty === 0) return 0;
+    const lastActive = [...localRowsWithBalance].reverse().find(r => r.inQty > 0 || r.outQty > 0);
+    return lastActive ? lastActive.balance : 0;
+  }, [localRowsWithBalance, sumInQty, sumOutQty]);
 
   // Initialize/adjust inventory levels when detergent ledger is saved
   const syncInventoryOnSave = (dirtyRowsList: any[]) => {
