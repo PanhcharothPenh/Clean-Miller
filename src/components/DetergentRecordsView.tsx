@@ -971,8 +971,8 @@ export default function DetergentRecordsView({
 
                         {/* សរុប Cumulative Balance display */}
                         <td className="py-2 px-4 text-center border-r border-slate-300 bg-slate-50">
-                          <span className={`font-black font-sans tracking-tight text-sm ${row.balance !== openingBalance ? 'text-slate-800' : 'text-slate-400'}`}>
-                            {row.balance}
+                          <span className="font-black font-sans tracking-tight text-sm text-slate-800">
+                            {(row.inQty > 0 || row.outQty > 0) ? row.balance : ''}
                           </span>
                         </td>
 
@@ -1337,7 +1337,7 @@ export default function DetergentRecordsView({
                             {r.note || ''}
                           </td>
                           <td className="py-1.5 px-2 text-center font-black text-red-700 bg-red-50/10 text-[11px]">
-                            {r.balance}
+                            {(r.inQty > 0 || r.outQty > 0) ? r.balance : ''}
                           </td>
                         </tr>
                       ))}
