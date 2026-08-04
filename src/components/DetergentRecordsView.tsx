@@ -57,8 +57,8 @@ export default function DetergentRecordsView({
   // FILTER STATES (Month, Year, Branch)
   // ----------------------------------------------------
   const [selectedBranchId, setSelectedBranchId] = useState<string>('b1');
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [selectedMonth, setSelectedMonth] = useState<number>(6); // Default: June
+  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth() + 1);
 
 
   // Active view tabs: 'sheet' | 'reports'

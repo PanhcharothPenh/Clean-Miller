@@ -57,8 +57,8 @@ export default function RevenueRecordsView({
   // FILTER STATES (Month, Year, Branch)
   // ----------------------------------------------------
   const [selectedBranchId, setSelectedBranchId] = useState<string>('b2'); // default to b2 (SN12 Branch)
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [selectedMonth, setSelectedMonth] = useState<number>(6); // June 2026
+  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth() + 1);
 
   // View state: 'sheet' | 'reports'
   const [activeTab, setActiveTab] = useState<'sheet' | 'reports'>('sheet');

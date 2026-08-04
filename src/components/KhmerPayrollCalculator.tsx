@@ -34,7 +34,7 @@ export default function KhmerPayrollCalculator({
   // Calculator Form State
   const [selectedStaffId, setSelectedStaffId] = useState('');
   const [month, setMonth] = useState(7); // July
-  const [year, setYear] = useState(2026);
+  const [year, setYear] = useState(() => new Date().getFullYear());
   const [period, setPeriod] = useState<1 | 2 | 3>(2); // Default to Period 2
   const [workedDays, setWorkedDays] = useState<number>(26);
   const [allowance, setAllowance] = useState<number>(0);

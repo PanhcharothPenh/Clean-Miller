@@ -61,8 +61,8 @@ export default function SoftenerRecordsView({
   // FILTER STATES (Month, Year, Branch)
   // ----------------------------------------------------
   const [selectedBranchId, setSelectedBranchId] = useState<string>('b1');
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [selectedMonth, setSelectedMonth] = useState<number>(6); // Default: June
+  const [selectedYear, setSelectedYear] = useState<number>(() => new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(() => new Date().getMonth() + 1);
   // Selected Brand Name State (Comfort, Ora, Siusip, or Custom)
   const [selectedBrand, setSelectedBrand] = useState<string>(() => localStorage.getItem('clean24_softener_brand') || 'Comfort');
   const [customBrandInput, setCustomBrandInput] = useState<string>('');
