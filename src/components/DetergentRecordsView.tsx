@@ -1281,7 +1281,7 @@ export default function DetergentRecordsView({
                 </div>
 
                 {/* Sub-Header Period labels in matching pill layout */}
-                <div className="flex flex-wrap justify-between items-center mt-6 text-[11px] font-bold text-sky-950 px-2 relative z-10 gap-3">
+                <div className="flex flex-wrap justify-between items-center mt-2 text-[10px] font-bold text-sky-950 px-2 relative z-10 gap-3">
                   <div className="flex items-center gap-1.5 bg-sky-50 border border-sky-200 px-3 py-1 rounded-full">
                     <Calendar className="w-3.5 h-3.5 text-sky-600" />
                     <span>{lang === 'en' ? 'Month:' : 'ខែ:'} <span className="text-sky-850 uppercase font-extrabold">{getMonthEnglish(selectedMonth)} ( {getMonthKhmer(selectedMonth)} )</span></span>
@@ -1297,7 +1297,7 @@ export default function DetergentRecordsView({
                 </div>
 
                 {/* Exact replication grid */}
-                <div className="mt-5 relative z-10 overflow-hidden rounded-xl border border-slate-355 shadow-xs">
+                <div className="mt-2 relative z-10 overflow-hidden rounded-xl border border-slate-355 shadow-xs">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-sky-600 text-white text-[11px] font-bold border-b border-sky-700">
@@ -1325,7 +1325,7 @@ export default function DetergentRecordsView({
                     </thead>
                     <tbody className="text-[10px] text-slate-800 font-mono divide-y divide-slate-350">
                       {localRowsWithBalance.map((r, i) => (
-                        <tr key={i} className="hover:bg-slate-50/50 odd:bg-white even:bg-slate-50/20" style={{ height: '24px' }}>
+                        <tr key={i} className="hover:bg-slate-50/50 odd:bg-white even:bg-slate-50/20" style={{ height: '17px' }}>
                           <td className="py-1.5 px-2 text-center border-r border-slate-355 font-bold text-slate-700">{r.label}</td>
                           <td className="py-1.5 px-1 text-center border-r border-slate-355 font-extrabold text-teal-850 bg-emerald-50/10">
                             {r.inQty > 0 ? r.inQty : ''}
@@ -1359,10 +1359,10 @@ export default function DetergentRecordsView({
                 </div>
 
                 {/* Footer signoff lines exactly matching fine print layout */}
-                <div className="mt-8 flex justify-between text-[11px] text-sky-950 font-bold px-3 relative z-10">
+                <div className="mt-3 flex justify-between text-[11px] text-sky-950 font-bold px-3 relative z-10">
                   <div className="flex flex-col">
                     <span className="flex items-center gap-1 italic">✍️ {lang === 'en' ? 'Prepared by checker:' : 'អ្នកកត់ត្រានិងពិនិត្យផ្ទាល់៖'}</span>
-                    <div className="w-[180px] border-b border-dashed border-sky-400 mt-8" />
+                    <div className="w-[160px] border-b border-dashed border-sky-400 mt-4" />
                     <span className="block mt-1 font-mono text-[9px] text-slate-400 font-normal">Signature & Date</span>
                   </div>
                   <div>

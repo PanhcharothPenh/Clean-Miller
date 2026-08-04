@@ -101,12 +101,12 @@ export function printElement(elementId: string, title: string) {
         <style>
           @page {
             size: A4 portrait;
-            margin: 0.6cm;
+            margin: 0.3cm;
           }
           html, body {
             background: #ffffff !important;
             color: #0f172a !important;
-            padding: 12px !important;
+            padding: 2px !important;
             margin: 0 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
