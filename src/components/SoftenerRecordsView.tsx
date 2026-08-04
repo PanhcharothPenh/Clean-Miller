@@ -845,8 +845,8 @@ export default function SoftenerRecordsView({
                     <th colSpan={3} className="py-1 px-3 text-center border-r border-sky-500 border-b border-sky-500 font-black bg-sky-800">
                       🌸 {lang === 'en' ? 'Softener Out (Pcs)' : 'ទឹកក្រអូបចេញតាមម៉ាក'}
                     </th>
-                    <th rowSpan={2} className="py-2 px-3 border-r border-sky-500 min-w-[160px] font-black">
-                      📝 {lang === 'en' ? 'Note / Remarks' : 'ចំណាំ'}
+                    <th rowSpan={2} className="py-2 px-2 border-r border-sky-500 w-[100px] text-center font-black">
+                      📝 {lang === 'en' ? 'Note' : 'ចំណាំ'}
                     </th>
                     <th rowSpan={2} className="py-2 px-3 text-center border-r border-sky-500 w-[95px] font-black bg-sky-900">
                       📊 {lang === 'en' ? 'Total Out' : 'សរុប'}
@@ -934,14 +934,14 @@ export default function SoftenerRecordsView({
                         </td>
 
                         {/* ចំណាំ (Note) Input */}
-                        <td className="py-1.5 px-3 border-r border-slate-300 text-left">
+                        <td className="py-1.5 px-1 border-r border-slate-300 text-center w-[100px]">
                           <input
                             type="text"
                             value={row.note}
                             onChange={(e) => handleCellChange(index, 'note', e.target.value)}
                             onBlur={() => handleInputBlur(index)}
-                            placeholder={lang === 'en' ? 'Add notes...' : 'ចំណាំផ្សេងៗ...'}
-                            className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-slate-400 focus:outline-none text-slate-700"
+                            placeholder={lang === 'en' ? 'Note' : 'ចំណាំ'}
+                            className="w-full max-w-[95px] mx-auto bg-white border border-slate-300 rounded-lg px-1.5 py-1 focus:ring-1 focus:ring-slate-400 focus:outline-none text-slate-700 text-[11px] text-center"
                           />
                         </td>
 
@@ -1353,7 +1353,7 @@ export default function SoftenerRecordsView({
                         <th colSpan={3} className="py-1.5 px-2 border-r border-sky-500 border-b border-sky-500 text-center font-black bg-sky-700">
                           🌸 {lang === 'en' ? 'Softener Brands Usage' : 'ទឹកក្រអូបប្រើប្រាស់តាមម៉ាក'}
                         </th>
-                        <th rowSpan={2} className="py-2.5 px-2 border-r border-sky-500 text-left min-w-[120px] font-black">
+                        <th rowSpan={2} className="py-2.5 px-1 border-r border-sky-500 text-center w-[90px] font-black">
                           📝 {lang === 'en' ? 'Note' : 'ចំណាំ'}
                         </th>
                         <th rowSpan={2} className="py-2.5 px-2 text-center w-[85px] font-black bg-sky-800">

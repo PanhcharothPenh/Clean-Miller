@@ -903,7 +903,7 @@ export default function DetergentRecordsView({
                   <tr className="bg-sky-600 text-white border-b border-sky-700">
                     <th rowSpan={2} className="py-2.5 px-4 font-black text-xs text-center border-r border-sky-500 min-w-[130px]">{lang === 'en' ? 'Date' : 'ថ្ងៃ'}</th>
                     <th colSpan={2} className="py-1.5 px-4 font-black text-xs text-center border-r border-sky-500">{lang === 'en' ? 'Quantity' : 'ចំនួន'}</th>
-                    <th rowSpan={2} className="py-2.5 px-4 font-black text-xs border-r border-sky-500 min-w-[200px]">{lang === 'en' ? 'Note (Remark)' : 'ចំណាំ (Note)'}</th>
+                    <th rowSpan={2} className="py-2.5 px-4 font-black text-xs border-r border-sky-500 w-[100px]">{lang === 'en' ? 'Note (Remark)' : 'ចំណាំ (Note)'}</th>
                     <th rowSpan={2} className="py-2.5 px-4 font-black text-xs text-center border-r border-sky-500 min-w-[110px]">{lang === 'en' ? 'Total (Balance)' : 'សរុប (Balance)'}</th>
                     <th rowSpan={2} className="py-2.5 px-4 font-black text-xs text-center min-w-[95px] print:hidden">{lang === 'en' ? 'Action' : 'សកម្មភាព'}</th>
                   </tr>
