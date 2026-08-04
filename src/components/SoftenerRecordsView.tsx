@@ -1270,34 +1270,7 @@ export default function SoftenerRecordsView({
                   </table>
                 </div>
 
-                {/* Footer signoff lines exactly matching fine print layout */}
-                <div className="mt-3 flex justify-between text-[11px] text-sky-955 font-bold px-3 relative z-10">
-                  <div className="flex flex-col">
-                    <span className="flex items-center gap-1 italic">✍️ {lang === 'en' ? 'Prepared by checker:' : 'អ្នកកត់ត្រានិងពិនិត្យផ្ទាល់៖'}</span>
-                    <div className="w-[160px] border-b border-dashed border-sky-400 mt-4" />
-                    <span className="block mt-1 font-mono text-[9px] text-slate-400 font-normal">Signature & Date</span>
-                  </div>
-                  <div>
-                    {/* Leaf shield crest logo */}
-                    <div className="flex flex-col items-center justify-center mt-2">
-                      <div className="relative">
-                        <svg className="w-12 h-12 text-sky-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="currentColor" fillOpacity="0.15"/>
-                          <path d="m9 12 2 2 4-4" strokeLinecap="round" strokeLinejoin="round"/>
-                        </svg>
-                        <div className="absolute -inset-1 border border-dashed border-sky-500 rounded-full animate-spin-slow opacity-25" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right flex flex-col items-end">
-                    <span className="flex items-center justify-end gap-1 italic">✍️ {lang === 'en' ? 'Approved by supervisor:' : 'ពិនិត្យនិងអនុម័តដោយប្រធានសាខា៖'}</span>
-                    <div className="w-[180px] border-b border-dashed border-sky-400 mt-8" />
-                    <span className="block mt-1 font-mono text-[9px] text-slate-400 font-normal">Signature & Date</span>
-                  </div>
-                </div>
 
-                {/* Bottom wave decoration */}
-                <div className="absolute bottom-0 inset-x-0 h-4 bg-gradient-to-r from-sky-400 via-blue-600 to-sky-400 print:h-3" />
               </div>
             </div>
 
