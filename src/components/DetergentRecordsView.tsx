@@ -1333,11 +1333,8 @@ export default function DetergentRecordsView({
                 
                 {/* Photo Header block */}
                 <div className="text-center font-sans relative z-10">
-                  <h1 className="text-3xl font-black text-sky-800 tracking-wider font-sans mb-1 flex items-center justify-center gap-2">
+                  <h1 className="text-3xl font-black text-sky-800 tracking-wider font-sans mb-1">
                     {lang === 'en' ? 'LIQUID SOAP / DETERGENT' : 'សាប៊ូ'}
-                    <span className="text-sm font-extrabold px-2.5 py-0.5 bg-pink-100 text-pink-700 rounded-full border border-pink-200">
-                      🏷️ {selectedBrand}
-                    </span>
                   </h1>
                   <div className="flex items-center justify-center gap-4 max-w-[280px] mx-auto">
                     <div className="h-[1.5px] bg-sky-600 flex-1" />
