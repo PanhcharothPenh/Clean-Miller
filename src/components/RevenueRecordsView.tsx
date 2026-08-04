@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { RevenueRecord, Role, Branch } from '../types';
+import { printElement } from '../utils';
+import Clean24Logo from './Clean24Logo';
 
 interface RevenueRecordsViewProps {
   currentRole: Role;
@@ -230,9 +232,10 @@ export default function RevenueRecordsView({
 
   // Selected Branch Name
   const selectedBranchName = useMemo(() => {
+    if (selectedBranchId === 'all') return lang === 'en' ? 'Consolidated Branches View' : 'គ្រប់សាខាទាំងអស់';
     const br = branches.find(b => b.id === selectedBranchId);
-    return br ? br.branchName : 'Unknown Branch';
-  }, [branches, selectedBranchId]);
+    return br ? br.branchName : (branches.length > 0 ? branches[0].branchName : 'Clean24 Laundry');
+  }, [branches, selectedBranchId, lang]);
 
   // Get days count
   const daysInMonth = useMemo(() => {
@@ -1480,14 +1483,14 @@ Date: ${telegramModalRow.label}`}
       </div>
 
       {/* ====================================================
-          PDF PRINT & PREVIEW INTERACTIVE MODAL
+          PDF PRINT & PREVIEW INTERACTIVE MODAL (HIGH FIDELITY A4)
           ==================================================== */}
       {isPdfModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in print:hidden" id="pdf_preview_modal">
-          <div className="bg-white rounded-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden border border-slate-200/80 shadow-2xl animate-slide-up">
+          <div className="bg-white rounded-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden border border-slate-200/80 shadow-2xl animate-slide-up">
             
             {/* Modal Heading Toolbar */}
-            <div className="px-5 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+            <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
               <div>
                 <h3 className="text-sm font-black uppercase text-slate-900 flex items-center gap-1.5">
                   <Printer className="w-4 h-4 text-cyan-600" />
@@ -1502,101 +1505,121 @@ Date: ${telegramModalRow.label}`}
 
               {/* Action Operations */}
               <div className="flex items-center gap-2">
-                {!pdfGenerating && !pdfError && pdfBlobUrl && (
-                  <>
-                    <button
-                      onClick={generateAndDownloadPdf}
-                      className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black rounded-lg flex items-center gap-1 transition-all animate-fade-in"
-                      title={lang === 'en' ? 'Regenerate Document' : 'បង្កើតជាថ្មី'}
-                    >
-                      <RefreshCw className="w-3.5 h-3.5" />
-                    </button>
-
-                    <button
-                      onClick={handlePrintPdfFromIframe}
-                      className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-black rounded-lg flex items-center gap-1 shadow-xs transition-all"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      {lang === 'en' ? 'Print PDF' : 'បោះពុម្ព'}
-                    </button>
-
-                    <button
-                      onClick={handleDownloadPdf}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-lg flex items-center gap-1 shadow-xs transition-all"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      {lang === 'en' ? 'Download' : 'ទាញយក'}
-                    </button>
-                  </>
-                )}
+                <button
+                  onClick={() => printElement('revenue-pdf-printable-area', `Revenue Report - ${selectedBranchName}`)}
+                  className="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-black rounded-xl flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  {lang === 'en' ? 'Print / Download PDF' : 'បោះពុម្ព / ទាញយក PDF'}
+                </button>
 
                 <button
-                  onClick={() => {
-                    setIsPdfModalOpen(false);
-                    if (pdfBlobUrl) {
-                      window.URL.revokeObjectURL(pdfBlobUrl);
-                      setPdfBlobUrl(null);
-                    }
-                  }}
-                  className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600 transition-all ml-1"
+                  onClick={handleExportExcel}
+                  className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-black rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  {lang === 'en' ? 'Excel' : 'Excel'}
+                </button>
+
+                <button
+                  onClick={() => setIsPdfModalOpen(false)}
+                  className="p-1.5 hover:bg-slate-200 rounded-xl text-slate-400 hover:text-slate-600 transition-all ml-1 cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* Modal Body content area */}
-            <div className="flex-1 bg-slate-100 relative">
-              {pdfGenerating && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-xs z-10 space-y-4">
-                  <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-                  <div className="text-center">
-                    <p className="text-xs font-black text-slate-900 uppercase tracking-wider animate-pulse">
-                      {lang === 'en' ? 'Compiling Official Report...' : 'កំពុងបង្កើតឯកសាររបាយការណ៍...'}
-                    </p>
-                    <p className="text-[10px] text-slate-500 mt-1">
-                      {lang === 'en' 
-                        ? 'Loading TrueType Noto Sans Khmer font & aligning page layouts...' 
-                        : 'កំពុងទាញយកពុម្ពអក្សរខ្មែរ Noto Sans & តម្រង់ជួរតារាង A4...'}
-                    </p>
+            {/* Modal Body: A4 Printable Document Container */}
+            <div className="flex-1 bg-slate-200/70 p-4 md:p-6 overflow-y-auto">
+              <div 
+                id="revenue-pdf-printable-area" 
+                className="bg-white mx-auto p-6 md:p-8 rounded-xl shadow-lg border border-slate-200/80 max-w-[210mm] font-sans text-slate-800"
+                style={{ minHeight: '297mm' }}
+              >
+                {/* Print Document Header */}
+                <div className="flex items-center justify-between border-b-2 border-cyan-600 pb-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <Clean24Logo className="h-9 cursor-pointer" lightMode={true} />
+                    <div>
+                      <h1 className="text-base font-black uppercase text-cyan-900 tracking-wide">
+                        CLEAN24 DAILY REVENUE STATEMENT
+                      </h1>
+                      <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase">
+                        PHNOM PENH, KINGDOM OF CAMBODIA
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
 
-              {pdfError ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center space-y-3 bg-red-50/50">
-                  <div className="p-3 bg-red-100 rounded-full text-red-600">
-                    <Info className="w-6 h-6" />
+                  <div className="text-right">
+                    <span className="text-xs font-black text-cyan-800 uppercase block">
+                      📍 {selectedBranchName}
+                    </span>
+                    <span className="text-[11px] font-bold text-slate-600 block mt-0.5">
+                      🗓️ {getMonthAbbr(selectedMonth)} {selectedYear}
+                    </span>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-black text-slate-900 uppercase AN-ERROR">
-                      {lang === 'en' ? 'PDF Generation Failed' : 'ការបង្កើត PDF បានបរាជ័យ'}
-                    </h4>
-                    <p className="text-xs text-red-700 mt-1 max-w-md font-mono select-text bg-red-50 p-2.5 rounded-lg border border-red-200">
-                      {pdfError}
-                    </p>
-                  </div>
-                  <button
-                    onClick={generateAndDownloadPdf}
-                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs transition-all"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                    {lang === 'en' ? 'Retry Generation' : 'ព្យាយាមឡើងវិញ'}
-                  </button>
                 </div>
-              ) : (
-                pdfBlobUrl && (
-                  <iframe
-                    id="pdf-preview-iframe"
-                    src={`${pdfBlobUrl}#toolbar=1&navpanes=0`}
-                    className="w-full h-full border-0 bg-slate-100"
-                    title="PDF Print Preview"
-                  />
-                )
-              )}
+
+                {/* Summary Header Metrics */}
+                <div className="grid grid-cols-4 gap-3 mb-4 text-center">
+                  <div className="bg-blue-50 border border-blue-100 p-2 rounded-xl">
+                    <span className="text-[9px] text-blue-600 font-bold uppercase block">Total Cash (លុយសុទ្ធ)</span>
+                    <span className="text-xs font-extrabold text-blue-800">{formatKHR(sumCash)}</span>
+                  </div>
+                  <div className="bg-purple-50 border border-purple-100 p-2 rounded-xl">
+                    <span className="text-[9px] text-purple-600 font-bold uppercase block">Total ABA (ABA)</span>
+                    <span className="text-xs font-extrabold text-purple-800">{formatKHR(sumAba)}</span>
+                  </div>
+                  <div className="bg-cyan-50 border border-cyan-100 p-2 rounded-xl">
+                    <span className="text-[9px] text-cyan-600 font-bold uppercase block">Total Revenue (ចំណូលសរុប)</span>
+                    <span className="text-xs font-extrabold text-cyan-900">{formatKHR(sumRevenue)}</span>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-100 p-2 rounded-xl">
+                    <span className="text-[9px] text-amber-600 font-bold uppercase block">Bank Deposit (ចូលធនាគារ)</span>
+                    <span className="text-xs font-extrabold text-amber-800">{formatKHR(sumBankDeposit)}</span>
+                  </div>
+                </div>
+
+                {/* Printable Table */}
+                <table className="w-full text-left border-collapse border border-slate-300">
+                  <thead>
+                    <tr className="bg-cyan-700 text-white text-center font-bold text-[10px] uppercase">
+                      <th className="py-1.5 px-1 border border-cyan-800">Date</th>
+                      <th className="py-1.5 px-1 border border-cyan-800">Cash In</th>
+                      <th className="py-1.5 px-1 border border-cyan-800">ABA In</th>
+                      <th className="py-1.5 px-1 border border-cyan-800">Bank Deposit</th>
+                      <th className="py-1.5 px-1 border border-cyan-800">Daily Total</th>
+                      <th className="py-1.5 px-1 border border-cyan-800">Note</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-[10px] font-mono divide-y divide-slate-200">
+                    {processedRows.map((r, i) => (
+                      <tr key={i} className="hover:bg-slate-50" style={{ height: '17px' }}>
+                        <td className="py-1 px-1.5 text-center font-sans font-bold text-slate-800 border-r border-slate-300">{r.label}</td>
+                        <td className="py-1 px-1.5 text-right text-blue-700 font-bold border-r border-slate-300">{r.cash > 0 ? formatKHR(r.cash) : ''}</td>
+                        <td className="py-1 px-1.5 text-right text-purple-700 font-bold border-r border-slate-300">{r.aba > 0 ? formatKHR(r.aba) : ''}</td>
+                        <td className="py-1 px-1.5 text-right text-amber-700 font-bold border-r border-slate-300">{r.bankDeposit > 0 ? formatKHR(r.bankDeposit) : ''}</td>
+                        <td className="py-1 px-1.5 text-right font-extrabold text-cyan-900 bg-cyan-50/40 border-r border-slate-300">{r.dailyRevenue > 0 ? formatKHR(r.dailyRevenue) : ''}</td>
+                        <td className="py-1 px-1.5 text-left font-sans text-slate-600 text-[9px] truncate max-w-[150px]">{r.notes || ''}</td>
+                      </tr>
+                    ))}
+                    {/* Summary Footer Row */}
+                    <tr className="bg-cyan-700 text-white font-extrabold text-[11px] border-t-2 border-cyan-800">
+                      <td className="py-2 px-1.5 text-center font-black">TOTAL:</td>
+                      <td className="py-2 px-1.5 text-right">{formatKHR(sumCash)}</td>
+                      <td className="py-2 px-1.5 text-right">{formatKHR(sumAba)}</td>
+                      <td className="py-2 px-1.5 text-right">{formatKHR(sumBankDeposit)}</td>
+                      <td className="py-2 px-1.5 text-right bg-cyan-900 text-white">{formatKHR(sumRevenue)}</td>
+                      <td className="py-2 px-1.5 text-center font-sans text-[9px]">Verified Report</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
+      
       )}
     </div>
   );
