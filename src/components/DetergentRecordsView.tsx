@@ -59,30 +59,7 @@ export default function DetergentRecordsView({
   const [selectedBranchId, setSelectedBranchId] = useState<string>('b1');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedMonth, setSelectedMonth] = useState<number>(6); // Default: June
-  // Selected Brand Name State (Comfort, Ora, Siusip, or Custom)
-  const [selectedBrand, setSelectedBrand] = useState<string>(() => localStorage.getItem('clean24_detergent_brand') || 'Comfort');
-  const [customBrandInput, setCustomBrandInput] = useState<string>('');
-  const [isCustomBrand, setIsCustomBrand] = useState<boolean>(false);
 
-  const handleBrandChange = (val: string) => {
-    if (val === 'CUSTOM') {
-      setIsCustomBrand(true);
-    } else {
-      setIsCustomBrand(false);
-      setSelectedBrand(val);
-      localStorage.setItem('clean24_detergent_brand', val);
-    }
-  };
-
-  const handleCustomBrandSubmit = () => {
-    if (customBrandInput.trim()) {
-      const brandVal = customBrandInput.trim();
-      setSelectedBrand(brandVal);
-      localStorage.setItem('clean24_detergent_brand', brandVal);
-      setIsCustomBrand(false);
-      setCustomBrandInput('');
-    }
-  };
 
   // Active view tabs: 'sheet' | 'reports'
   const [activeTab, setActiveTab] = useState<'sheet' | 'reports'>('sheet');
@@ -827,52 +804,7 @@ export default function DetergentRecordsView({
             </select>
           </div>
 
-          {/* Brand Name Selector (Comfort, Ora, Siusip, Custom) */}
-          <div className="flex flex-col gap-1 min-w-[140px]">
-            <span className="text-[10px] text-pink-600 font-bold uppercase tracking-wider flex items-center gap-1">
-              🏷️ {lang === 'en' ? 'Soup Brand' : 'ម៉ាកសាប៊ូ/ទឹកក្រអូប'}
-            </span>
-            {!isCustomBrand ? (
-              <select
-                value={['Comfort', 'Ora', 'Siusip'].includes(selectedBrand) ? selectedBrand : 'CUSTOM_ACTIVE'}
-                onChange={(e) => handleBrandChange(e.target.value)}
-                className="px-3 py-1.5 bg-pink-50/70 hover:bg-pink-100/70 border border-pink-200 text-pink-900 text-xs font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-400"
-              >
-                <option value="Comfort">Comfort</option>
-                <option value="Ora">Ora</option>
-                <option value="Siusip">Siusip</option>
-                {!['Comfort', 'Ora', 'Siusip'].includes(selectedBrand) && (
-                  <option value="CUSTOM_ACTIVE">{selectedBrand} (Custom)</option>
-                )}
-                <option value="CUSTOM">+ {lang === 'en' ? 'Custom Brand...' : 'បន្ថែមម៉ាកផ្សេងៗ...'}</option>
-              </select>
-            ) : (
-              <div className="flex items-center gap-1">
-                <input
-                  type="text"
-                  placeholder="e.g. Attack, Downy"
-                  value={customBrandInput}
-                  onChange={(e) => setCustomBrandInput(e.target.value)}
-                  className="px-2.5 py-1 bg-white border border-pink-300 text-xs font-bold rounded-lg text-slate-800 focus:outline-none w-28"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={handleCustomBrandSubmit}
-                  className="px-2 py-1 bg-pink-600 hover:bg-pink-700 text-white text-xs font-black rounded-lg"
-                >
-                  ✓
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsCustomBrand(false)}
-                  className="px-1.5 py-1 bg-slate-200 text-slate-600 text-xs rounded-lg font-bold"
-                >
-                  ✕
-                </button>
-              </div>
-            )}
-          </div>
+
 
 
         </div>
