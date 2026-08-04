@@ -1135,26 +1135,7 @@ export default function App() {
             {renderTabContent()}
           </div>
 
-          {/* Real-time audit logs block (Only visible to Head Admin or Owners to verify multi-branch transactions) */}
-          {['Owner', 'Admin'].includes(currentRole) && (
-            <div className="bg-slate-900 text-slate-300 p-4.5 rounded-2xl border border-slate-850 font-mono text-[11px] space-y-3 shadow-md" id="admin_audit_terminal">
-              <div className="flex justify-between items-center pb-2 border-b border-slate-800">
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                  Bilingual Transaction log terminal: Clean24 Audit trail
-                </span>
-                <span className="text-[9px] text-indigo-400 italic font-semibold">Active role: {currentRole}</span>
-              </div>
-              <div className="max-h-32 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
-                {auditLogs.map((log, id) => (
-                  <div key={id} className="text-slate-400 flex gap-2">
-                    <span className="text-emerald-500 shrink-0 select-none">&gt;</span>
-                    <p className="leading-relaxed font-bold">{log}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          
         </main>
       </div>
     </div>
