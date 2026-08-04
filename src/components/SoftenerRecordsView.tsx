@@ -63,6 +63,30 @@ export default function SoftenerRecordsView({
   const [selectedBranchId, setSelectedBranchId] = useState<string>('b1');
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedMonth, setSelectedMonth] = useState<number>(6); // Default: June
+  // Selected Brand Name State (Comfort, Ora, Siusip, or Custom)
+  const [selectedBrand, setSelectedBrand] = useState<string>(() => localStorage.getItem('clean24_softener_brand') || 'Comfort');
+  const [customBrandInput, setCustomBrandInput] = useState<string>('');
+  const [isCustomBrand, setIsCustomBrand] = useState<boolean>(false);
+
+  const handleBrandChange = (val: string) => {
+    if (val === 'CUSTOM') {
+      setIsCustomBrand(true);
+    } else {
+      setIsCustomBrand(false);
+      setSelectedBrand(val);
+      localStorage.setItem('clean24_softener_brand', val);
+    }
+  };
+
+  const handleCustomBrandSubmit = () => {
+    if (customBrandInput.trim()) {
+      const brandVal = customBrandInput.trim();
+      setSelectedBrand(brandVal);
+      localStorage.setItem('clean24_softener_brand', brandVal);
+      setIsCustomBrand(false);
+      setCustomBrandInput('');
+    }
+  };
 
   // Active view tabs: 'sheet' | 'reports'
   const [activeTab, setActiveTab] = useState<'sheet' | 'reports'>('sheet');

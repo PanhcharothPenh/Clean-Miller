@@ -323,13 +323,28 @@ export default function InventoryView({
             <form onSubmit={handleCreateItem} className="space-y-4 pt-4" id="form_create_item">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
-                  <label className="text-[11px] font-bold text-slate-500 mb-1 block">Item Name *</label>
+                  <label className="text-[11px] font-bold text-slate-500 mb-1 block flex justify-between items-center">
+                    <span>Item Name *</span>
+                    <span className="text-[9px] text-pink-600 font-bold uppercase">Preset Brands:</span>
+                  </label>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    {['Comfort', 'Ora', 'Siusip'].map(b => (
+                      <button
+                        key={b}
+                        type="button"
+                        onClick={() => setName(prev => prev ? `${prev} (${b})` : b)}
+                        className="px-2 py-0.5 bg-pink-50 hover:bg-pink-100 border border-pink-200 text-pink-700 text-[10px] font-bold rounded-lg transition-all"
+                      >
+                        + {b}
+                      </button>
+                    ))}
+                  </div>
                   <input
                     type="text"
-                    placeholder="e.g. Lavender Fabric Softener Premium XL"
+                    placeholder="e.g. Comfort Liquid Detergent (5L)"
                     value={name}
                     onChange={e => setName(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl p-2.5 focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl p-2.5 focus:outline-none focus:border-emerald-500 font-medium"
                     required
                   />
                 </div>
