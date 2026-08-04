@@ -833,18 +833,32 @@ export default function SoftenerRecordsView({
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse border border-slate-300">
+              <table className="w-full text-left border-collapse border border-slate-300 shadow-xs">
                 <thead>
-                  <tr className="bg-sky-600 text-white border-b border-sky-700 text-xs font-bold">
-                    <th rowSpan={2} className="py-2.5 px-4 text-center border-r border-sky-500 min-w-[130px] font-black">{lang === 'en' ? 'Date' : 'ថ្ងៃ'}</th>
-                    <th colSpan={2} className="py-1.5 px-4 text-center border-r border-sky-500 font-black">{lang === 'en' ? 'Quantity' : 'ចំនួន'}</th>
-                    <th rowSpan={2} className="py-2.5 px-4 border-r border-sky-500 min-w-[200px] font-black">{lang === 'en' ? 'Note (Remark)' : 'ចំណាំ (Note)'}</th>
-                    <th rowSpan={2} className="py-2.5 px-4 text-center border-r border-sky-500 min-w-[100px] font-black">{lang === 'en' ? 'Total (Out)' : 'សរុប (ចេញ)'}</th>
-                    <th rowSpan={2} className="py-2.5 px-4 text-center min-w-[90px] print:hidden font-black">{lang === 'en' ? 'Action' : 'សកម្មភាព'}</th>
+                  <tr className="bg-sky-700 text-white border-b border-sky-800 text-xs font-bold">
+                    <th rowSpan={2} className="py-2 px-3 text-center border-r border-sky-500 w-[110px] font-black">
+                      📅 {lang === 'en' ? 'Date' : 'ថ្ងៃ'}
+                    </th>
+                    <th rowSpan={2} className="py-2 px-2 text-center border-r border-sky-500 w-[80px] font-black bg-emerald-700">
+                      🛢️ {lang === 'en' ? 'Stock In' : 'ចូល'}
+                    </th>
+                    <th colSpan={3} className="py-1 px-3 text-center border-r border-sky-500 border-b border-sky-500 font-black bg-sky-800">
+                      🌸 {lang === 'en' ? 'Softener Out (Pcs)' : 'ទឹកក្រអូបចេញតាមម៉ាក'}
+                    </th>
+                    <th rowSpan={2} className="py-2 px-3 border-r border-sky-500 min-w-[160px] font-black">
+                      📝 {lang === 'en' ? 'Note / Remarks' : 'ចំណាំ'}
+                    </th>
+                    <th rowSpan={2} className="py-2 px-3 text-center border-r border-sky-500 w-[95px] font-black bg-sky-900">
+                      📊 {lang === 'en' ? 'Total Out' : 'សរុប'}
+                    </th>
+                    <th rowSpan={2} className="py-2 px-3 text-center w-[90px] print:hidden font-black">
+                      {lang === 'en' ? 'Action' : 'សកម្មភាព'}
+                    </th>
                   </tr>
-                  <tr className="bg-sky-500 text-white border-b border-sky-600 text-[11px] font-bold">
-                    <th className="py-1.5 px-3 text-center border-r border-sky-400 min-w-[100px]">{lang === 'en' ? 'In (Refill)' : 'ចូល'}</th>
-                    <th className="py-1.5 px-3 text-center border-r border-sky-400 min-w-[100px]">{lang === 'en' ? 'Out (Softener)' : 'ទឹកក្រអូប (ចេញ)'}</th>
+                  <tr className="bg-sky-600 text-white border-b border-sky-700 text-[11px] font-bold">
+                    <th className="py-1 px-2 text-center border-r border-sky-400 w-[75px] font-extrabold bg-sky-700/90">Comfort</th>
+                    <th className="py-1 px-2 text-center border-r border-sky-400 w-[75px] font-extrabold bg-sky-700/90">Ora</th>
+                    <th className="py-1 px-2 text-center border-r border-sky-400 w-[75px] font-extrabold bg-sky-700/90">Siusip</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-300 font-sans text-xs">
@@ -1299,11 +1313,8 @@ export default function SoftenerRecordsView({
                 {/* Photo Header block */}
                 <div className="text-center font-sans relative z-10">
                   {/* Category Title centered with diamond */}
-                  <h1 className="text-3xl font-black text-sky-800 tracking-wider font-sans mb-1 flex items-center justify-center gap-2">
+                  <h1 className="text-3xl font-black text-sky-800 tracking-wider font-sans mb-1">
                     {lang === 'en' ? 'FABRIC SOFTENER' : 'ទឹកក្រអូប'}
-                    <span className="text-sm font-extrabold px-2.5 py-0.5 bg-sky-100 text-sky-800 rounded-full border border-sky-200">
-                      🌸 {selectedBrand}
-                    </span>
                   </h1>
                   <div className="flex items-center justify-center gap-4 max-w-[280px] mx-auto">
                     <div className="h-[1.5px] bg-sky-600 flex-1" />
