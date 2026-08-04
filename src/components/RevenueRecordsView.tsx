@@ -1603,17 +1603,29 @@ Date: ${telegramModalRow.label}`}
                       <th className="py-1.5 px-1 border border-cyan-800">Note</th>
                     </tr>
                   </thead>
-                  <tbody className="text-[10px] font-mono divide-y divide-slate-200">
+                  <tbody className="text-[10px] font-mono border-t border-slate-300">
                     {processedRows.map((r, i) => (
-                      <tr key={i} className="hover:bg-slate-50" style={{ height: '17px' }}>
-                        <td className="py-1 px-1.5 text-center font-sans font-bold text-slate-800 border-r border-slate-300">{r.label}</td>
-                        <td className="py-1 px-1.5 text-right font-mono text-slate-700 border-r border-slate-300">{r.startCounter > 0 ? r.startCounter.toLocaleString() : ''}</td>
-                        <td className="py-1 px-1.5 text-right font-mono text-slate-700 border-r border-slate-300">{r.endCounter > 0 ? r.endCounter.toLocaleString() : ''}</td>
-                        <td className="py-1 px-1.5 text-right text-blue-700 font-bold border-r border-slate-300">{r.cash > 0 ? formatKHR(r.cash) : ''}</td>
-                        <td className="py-1 px-1.5 text-right text-purple-700 font-bold border-r border-slate-300">{r.aba > 0 ? formatKHR(r.aba) : ''}</td>
-                        <td className="py-1 px-1.5 text-right font-extrabold text-cyan-900 bg-cyan-50/40 border-r border-slate-300">{r.dailyRevenue > 0 ? formatKHR(r.dailyRevenue) : ''}</td>
-                        <td className="py-1 px-1.5 text-left font-sans text-slate-600 text-[9px] truncate max-w-[130px]">{r.notes || ''}</td>
-                      </tr>
+                      <React.Fragment key={i}>
+                        {/* Line 1: Cash Counter & Cash Difference */}
+                        <tr className="hover:bg-slate-50 border-t border-slate-300">
+                          <td rowSpan={2} className="py-1 px-1.5 text-center font-sans font-bold text-slate-800 border-r border-slate-300 align-middle bg-slate-50/40">
+                            {r.label}<br/><span className="text-[8px] font-mono text-slate-400 font-normal">{r.time || '10:30'}</span>
+                          </td>
+                          <td className="py-0.5 px-1.5 text-right font-mono text-slate-800 border-r border-slate-200">{r.startCounter > 0 ? r.startCounter.toLocaleString() : ''}</td>
+                          <td className="py-0.5 px-1.5 text-right font-mono text-slate-800 border-r border-slate-300">{r.endCounter > 0 ? r.endCounter.toLocaleString() : ''}</td>
+                          <td className="py-0.5 px-1.5 text-right font-bold text-blue-700 border-r border-slate-300">{r.cash > 0 ? formatKHR(r.cash) : ''}</td>
+                          <td className="py-0.5 px-1.5 text-right font-bold text-purple-700 border-r border-slate-300"></td>
+                          <td rowSpan={2} className="py-1 px-1.5 text-right font-extrabold text-cyan-950 bg-cyan-50/50 border-r border-slate-300 align-middle text-[11px]">{r.dailyRevenue > 0 ? formatKHR(r.dailyRevenue) : ''}</td>
+                          <td rowSpan={2} className="py-1 px-1.5 text-left font-sans text-slate-600 text-[9px] truncate max-w-[130px] align-middle">{r.notes || ''}</td>
+                        </tr>
+                        {/* Line 2: ABA Counter & ABA Difference */}
+                        <tr className="hover:bg-slate-50 border-b border-slate-300">
+                          <td className="py-0.5 px-1.5 text-right font-mono text-slate-600 border-r border-slate-200 bg-slate-50/30">{r.startCounterAba > 0 ? r.startCounterAba.toLocaleString() : ''}</td>
+                          <td className="py-0.5 px-1.5 text-right font-mono text-slate-600 border-r border-slate-300 bg-slate-50/30">{r.endCounterAba > 0 ? r.endCounterAba.toLocaleString() : ''}</td>
+                          <td className="py-0.5 px-1.5 text-right font-bold text-blue-700 border-r border-slate-300"></td>
+                          <td className="py-0.5 px-1.5 text-right font-bold text-purple-700 border-r border-slate-300">{r.aba > 0 ? formatKHR(r.aba) : ''}</td>
+                        </tr>
+                      </React.Fragment>
                     ))}
                     {/* Summary Footer Row */}
                     <tr className="bg-cyan-700 text-white font-extrabold text-[11px] border-t-2 border-cyan-800">
