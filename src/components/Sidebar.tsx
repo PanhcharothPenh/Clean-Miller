@@ -248,26 +248,7 @@ export default function Sidebar({
   const favoritesExpanded = isGroupExpanded('clean24_favorites_group');
 
   return (
-    <>
-      {/* Mobile top bar */}
-      <div className="md:hidden bg-white border-b border-slate-100 h-16 px-4 flex items-center justify-between sticky top-0 z-50">
-        <div className="flex items-center gap-2">
-          <Clean24Logo className="h-7 cursor-pointer" lightMode={true} />
-        </div>
-        <button 
-          onClick={() => setIsOpen(!isOpen)}
-          className="p-2 text-slate-400 hover:bg-slate-50 hover:text-slate-850 rounded-lg transition-colors"
-          id="mobile_sidebar_trigger"
-        >
-          {isOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
-      </div>
-
-      {/* Floating or fixed sidebar container */}
-      <aside className={`
-        fixed inset-y-0 left-0 z-40 w-72 bg-white text-slate-650 border-r border-slate-100 flex flex-col justify-between transform transition-transform duration-300 md:translate-x-0 md:static md:h-screen
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
+    <aside className="w-full h-full bg-white text-slate-650 border-r border-slate-100 flex flex-col justify-between overflow-hidden">
         {/* Top Header Branding Component */}
         <div className="p-4.5 border-b border-slate-100 bg-white">
           <div className="flex items-center justify-between mb-3.5">
@@ -468,14 +449,5 @@ export default function Sidebar({
         </div>
 
       </aside>
-      
-      {/* Mobile background overlay */}
-      {isOpen && (
-        <div 
-          onClick={() => setIsOpen(false)}
-          className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-30 md:hidden"
-        ></div>
-      )}
-    </>
   );
 }

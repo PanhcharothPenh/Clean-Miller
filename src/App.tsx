@@ -880,7 +880,7 @@ export default function App() {
     <div className="min-h-screen w-screen max-w-full bg-slate-50 flex overflow-hidden" id="main_saas_root">
       
       {/* 1. Left Sidebar Navigation Segment */}
-      <div className="hidden lg:block shrink-0 w-64 h-screen sticky top-0">
+      <div className="hidden lg:block shrink-0 w-72 h-screen sticky top-0">
         <Sidebar
           currentRole={currentRole}
           setCurrentRole={handleRoleSimulationSwap}
@@ -939,10 +939,12 @@ export default function App() {
             </button>
             
             <div className="flex items-center gap-2">
-              <Clean24Logo className="h-5.5 cursor-pointer" lightMode={true} />
-              <div className="h-4 w-px bg-slate-200 self-center mx-1.5" />
-              <span className="text-[10px] text-slate-400 font-bold tracking-wide uppercase hover:text-slate-700 transition-colors cursor-pointer self-center" id="header_branch_label">
-                {getActiveBranchLabel()}
+              <div className="lg:hidden flex items-center gap-2">
+                <Clean24Logo className="h-6 cursor-pointer" lightMode={true} />
+                <div className="h-4 w-px bg-slate-200 self-center mx-1" />
+              </div>
+              <span className="text-xs font-extrabold text-slate-600 tracking-wide uppercase self-center" id="header_branch_label">
+                📍 {getActiveBranchLabel()}
               </span>
             </div>
           </div>
