@@ -265,7 +265,7 @@ export default function Sidebar({
 
       {/* Floating or fixed sidebar container */}
       <aside className={`
-        fixed inset-y-0 left-0 z-40 w-64 bg-white text-slate-650 border-r border-slate-100 flex flex-col justify-between transform transition-transform duration-300 md:translate-x-0 md:static md:h-screen
+        fixed inset-y-0 left-0 z-40 w-72 bg-white text-slate-650 border-r border-slate-100 flex flex-col justify-between transform transition-transform duration-300 md:translate-x-0 md:static md:h-screen
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         {/* Top Header Branding Component */}
@@ -363,17 +363,17 @@ export default function Sidebar({
                           setActiveTab(item.id as any);
                           setIsOpen(false);
                         }}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 py-2.5 px-3.5 focus:outline-none cursor-pointer group/item
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 focus:outline-none cursor-pointer group/item
                           ${active 
-                            ? 'bg-blue-600 text-white font-semibold shadow-xs' 
-                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                            ? 'bg-blue-600 text-white font-bold shadow-xs' 
+                            : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                           }
                         `}
                         id={`fav_tab_${item.id}`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <item.icon size={18} className={active ? 'text-white' : 'text-slate-400 shrink-0'} />
-                          <span className="truncate">{item.label}</span>
+                          <span className="truncate text-xs font-bold flex-1 text-left">{item.label}</span>
                         </div>
                         <span 
                           onClick={(e) => toggleFavorite(item.id, e)}
@@ -428,10 +428,10 @@ export default function Sidebar({
                             setActiveTab(item.id as any);
                             setIsOpen(false);
                           }}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 py-2.5 px-3.5 focus:outline-none cursor-pointer group/item
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 focus:outline-none cursor-pointer group/item
                             ${active 
-                              ? 'bg-blue-600 text-white font-semibold shadow-xs' 
-                              : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                              ? 'bg-blue-600 text-white font-bold shadow-xs' 
+                              : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                             }
                           `}
                           id={`nav_tab_${item.id}`}
