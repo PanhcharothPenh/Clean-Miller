@@ -1598,19 +1598,19 @@ Date: ${telegramModalRow.label}`}
                             <span className="block font-extrabold">{r.label}</span>
                             <span className="block text-[8px] font-mono text-slate-400 font-normal">{r.time || '10:30'}</span>
                           </td>
-                          <td className="py-1 px-2 text-right font-mono font-bold text-slate-800 border-r border-slate-300 text-[11px] w-[130px]">
+                          <td className="py-1 px-2 text-right font-mono font-bold text-slate-800 border-r border-slate-300 border-b border-slate-200 text-[11px] w-[130px]">
                             {r.startCounter > 0 ? r.startCounter.toLocaleString() : ''}
                           </td>
-                          <td className="py-1 px-2 text-right font-mono font-bold text-slate-800 border-r border-slate-300 text-[11px] w-[130px]">
+                          <td className="py-1 px-2 text-right font-mono font-bold text-slate-800 border-r border-slate-300 border-b border-slate-200 text-[11px] w-[130px]">
                             {r.endCounter > 0 ? r.endCounter.toLocaleString() : ''}
                           </td>
                           <td rowSpan={2} className="py-1 px-1 text-left font-sans text-slate-700 text-[8.5px] border-r border-slate-300 w-[75px] max-w-[75px] truncate align-middle leading-tight">
                             {r.notes || ''}
                           </td>
-                          <td className="py-1 px-1.5 text-right font-mono font-bold text-blue-700 border-r border-slate-300 text-[10px]">
+                          <td className="py-1 px-1.5 text-right font-mono font-bold text-blue-700 border-r border-slate-300 border-b border-slate-200 text-[10px]">
                             {r.cash > 0 ? formatKHR(r.cash) : ''}
                           </td>
-                          <td className="py-1 px-1.5 text-right font-mono font-bold text-purple-700 border-r border-slate-300 text-[10px]"></td>
+                          <td className="py-1 px-1.5 text-right font-mono font-bold text-purple-700 border-r border-slate-300 border-b border-slate-200 text-[10px]"></td>
                           <td rowSpan={2} className="py-1 px-1.5 text-right font-mono font-extrabold text-cyan-950 bg-cyan-50/50 border-r border-slate-300 align-middle text-[11px]">
                             {r.dailyRevenue > 0 ? formatKHR(r.dailyRevenue) : ''}
                           </td>
