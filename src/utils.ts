@@ -78,7 +78,7 @@ export function exportToCSV(filename: string, headers: string[], rows: any[][]) 
 }
 
 // Helper to trigger browser printing of a specific element id
-export function printElement(elementId: string, title: string) {
+export function printElement(elementId: string, title: string, orientation: 'portrait' | 'landscape' = 'portrait') {
   const element = document.getElementById(elementId);
   if (!element) {
     console.error(`Print target #${elementId} not found`);
@@ -100,7 +100,7 @@ export function printElement(elementId: string, title: string) {
         ${styleTags}
         <style>
           @page {
-            size: A4 portrait;
+            size: A4 ${orientation};
             margin: 0.3cm;
           }
           html, body {

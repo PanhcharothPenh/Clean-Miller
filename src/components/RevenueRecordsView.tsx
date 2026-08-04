@@ -69,6 +69,7 @@ export default function RevenueRecordsView({
 
   // PDF Export and Preview States
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [pdfOrientation, setPdfOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfGenerating, setPdfGenerating] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -1505,8 +1506,34 @@ Date: ${telegramModalRow.label}`}
 
               {/* Action Operations */}
               <div className="flex items-center gap-2">
+                {/* Orientation Selector */}
+                <div className="flex items-center bg-slate-200/80 p-0.5 rounded-xl text-xs font-bold border border-slate-300 mr-1">
+                  <button
+                    type="button"
+                    onClick={() => setPdfOrientation('portrait')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                      pdfOrientation === 'portrait'
+                        ? 'bg-white text-slate-900 shadow-xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    📄 {lang === 'en' ? 'Portrait' : 'ឈរ'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPdfOrientation('landscape')}
+                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                      pdfOrientation === 'landscape'
+                        ? 'bg-white text-slate-900 shadow-xs font-black'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    📜 {lang === 'en' ? 'Landscape' : 'ដេក'}
+                  </button>
+                </div>
+
                 <button
-                  onClick={() => printElement('revenue-pdf-printable-area', `Revenue Report - ${selectedBranchName}`)}
+                  onClick={() => printElement('revenue-pdf-printable-area', `Revenue Report - ${selectedBranchName}`, pdfOrientation)}
                   className="px-3.5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-black rounded-xl flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                 >
                   <Printer className="w-3.5 h-3.5" />
@@ -1534,7 +1561,7 @@ Date: ${telegramModalRow.label}`}
             <div className="flex-1 bg-slate-200/70 p-4 md:p-6 overflow-y-auto">
               <div 
                 id="revenue-pdf-printable-area" 
-                className="bg-white mx-auto p-6 md:p-8 rounded-xl shadow-lg border border-slate-200/80 max-w-[210mm] font-sans text-slate-800"
+                className={`bg-white mx-auto p-6 md:p-8 rounded-xl shadow-lg border border-slate-200/80 font-sans text-slate-800 transition-all ${pdfOrientation === "landscape" ? "max-w-[297mm]" : "max-w-[210mm]"}`}
                 style={{ minHeight: '297mm' }}
               >
                 {/* Print Document Header */}
@@ -1561,25 +1588,7 @@ Date: ${telegramModalRow.label}`}
                   </div>
                 </div>
 
-                {/* Summary Header Metrics */}
-                <div className="grid grid-cols-4 gap-3 mb-4 text-center">
-                  <div className="bg-blue-50 border border-blue-100 p-2 rounded-xl">
-                    <span className="text-[9px] text-blue-600 font-bold uppercase block">Total Cash (លុយសុទ្ធ)</span>
-                    <span className="text-xs font-extrabold text-blue-800">{formatKHR(sumCash)}</span>
-                  </div>
-                  <div className="bg-purple-50 border border-purple-100 p-2 rounded-xl">
-                    <span className="text-[9px] text-purple-600 font-bold uppercase block">Total ABA (ABA)</span>
-                    <span className="text-xs font-extrabold text-purple-800">{formatKHR(sumAba)}</span>
-                  </div>
-                  <div className="bg-cyan-50 border border-cyan-100 p-2 rounded-xl">
-                    <span className="text-[9px] text-cyan-600 font-bold uppercase block">Total Revenue (ចំណូលសរុប)</span>
-                    <span className="text-xs font-extrabold text-cyan-900">{formatKHR(sumRevenue)}</span>
-                  </div>
-                  <div className="bg-amber-50 border border-amber-100 p-2 rounded-xl">
-                    <span className="text-[9px] text-amber-600 font-bold uppercase block">Bank Deposit (ចូលធនាគារ)</span>
-                    <span className="text-xs font-extrabold text-amber-800">{formatKHR(sumBankDeposit)}</span>
-                  </div>
-                </div>
+
 
                 {/* Printable Table */}
                 <table className="w-full text-left border-collapse border border-slate-300">
