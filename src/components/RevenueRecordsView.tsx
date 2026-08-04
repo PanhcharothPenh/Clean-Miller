@@ -1595,9 +1595,11 @@ Date: ${telegramModalRow.label}`}
                   <thead>
                     <tr className="bg-cyan-700 text-white text-center font-bold text-[10px] uppercase">
                       <th className="py-1.5 px-1 border border-cyan-800">Date</th>
+                      <th className="py-1.5 px-1 border border-cyan-800">Start Counter</th>
+                      <th className="py-1.5 px-1 border border-cyan-800">End Counter</th>
                       <th className="py-1.5 px-1 border border-cyan-800">Cash In</th>
                       <th className="py-1.5 px-1 border border-cyan-800">ABA In</th>
-                                            <th className="py-1.5 px-1 border border-cyan-800">Daily Total</th>
+                      <th className="py-1.5 px-1 border border-cyan-800">Daily Total</th>
                       <th className="py-1.5 px-1 border border-cyan-800">Note</th>
                     </tr>
                   </thead>
@@ -1605,18 +1607,22 @@ Date: ${telegramModalRow.label}`}
                     {processedRows.map((r, i) => (
                       <tr key={i} className="hover:bg-slate-50" style={{ height: '17px' }}>
                         <td className="py-1 px-1.5 text-center font-sans font-bold text-slate-800 border-r border-slate-300">{r.label}</td>
+                        <td className="py-1 px-1.5 text-right font-mono text-slate-700 border-r border-slate-300">{r.startCounter > 0 ? r.startCounter.toLocaleString() : ''}</td>
+                        <td className="py-1 px-1.5 text-right font-mono text-slate-700 border-r border-slate-300">{r.endCounter > 0 ? r.endCounter.toLocaleString() : ''}</td>
                         <td className="py-1 px-1.5 text-right text-blue-700 font-bold border-r border-slate-300">{r.cash > 0 ? formatKHR(r.cash) : ''}</td>
                         <td className="py-1 px-1.5 text-right text-purple-700 font-bold border-r border-slate-300">{r.aba > 0 ? formatKHR(r.aba) : ''}</td>
-                                                <td className="py-1 px-1.5 text-right font-extrabold text-cyan-900 bg-cyan-50/40 border-r border-slate-300">{r.dailyRevenue > 0 ? formatKHR(r.dailyRevenue) : ''}</td>
-                        <td className="py-1 px-1.5 text-left font-sans text-slate-600 text-[9px] truncate max-w-[150px]">{r.notes || ''}</td>
+                        <td className="py-1 px-1.5 text-right font-extrabold text-cyan-900 bg-cyan-50/40 border-r border-slate-300">{r.dailyRevenue > 0 ? formatKHR(r.dailyRevenue) : ''}</td>
+                        <td className="py-1 px-1.5 text-left font-sans text-slate-600 text-[9px] truncate max-w-[130px]">{r.notes || ''}</td>
                       </tr>
                     ))}
                     {/* Summary Footer Row */}
                     <tr className="bg-cyan-700 text-white font-extrabold text-[11px] border-t-2 border-cyan-800">
                       <td className="py-2 px-1.5 text-center font-black">TOTAL:</td>
+                      <td className="py-2 px-1.5 text-center font-mono text-[9px] font-normal text-cyan-200">-</td>
+                      <td className="py-2 px-1.5 text-center font-mono text-[9px] font-normal text-cyan-200">-</td>
                       <td className="py-2 px-1.5 text-right">{formatKHR(sumCash)}</td>
                       <td className="py-2 px-1.5 text-right">{formatKHR(sumAba)}</td>
-                                            <td className="py-2 px-1.5 text-right bg-cyan-900 text-white">{formatKHR(sumRevenue)}</td>
+                      <td className="py-2 px-1.5 text-right bg-cyan-900 text-white">{formatKHR(sumRevenue)}</td>
                       <td className="py-2 px-1.5 text-center font-sans text-[9px]">Verified Report</td>
                     </tr>
                   </tbody>
