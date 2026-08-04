@@ -442,8 +442,8 @@ export default function RevenueRecordsView({
   const saveRow = (index: number) => {
     const row = processedRows[index];
 
-    const hasCashError = row.endCounter < row.startCounter;
-    const hasAbaError = row.endCounterAba < row.startCounterAba;
+    const hasCashError = row.endCounter > 0 && row.endCounter < row.startCounter;
+    const hasAbaError = row.endCounterAba > 0 && row.endCounterAba < row.startCounterAba;
 
     if (hasCashError || hasAbaError) {
       if (isOwner || isManager) {
@@ -521,8 +521,8 @@ export default function RevenueRecordsView({
 
   // Batch save the full month list
   const saveAllRows = () => {
-    const invalidCashRow = processedRows.find(r => r.endCounter < r.startCounter);
-    const invalidAbaRow = processedRows.find(r => r.endCounterAba < r.startCounterAba);
+    const invalidCashRow = processedRows.find(r => r.endCounter > 0 && r.endCounter < r.startCounter);
+    const invalidAbaRow = processedRows.find(r => r.endCounterAba > 0 && r.endCounterAba < r.startCounterAba);
 
     if (invalidCashRow || invalidAbaRow) {
       if (isOwner || isManager) {
