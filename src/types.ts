@@ -377,6 +377,7 @@ export interface SoftenerRecord {
   outQty?: number;
   comfort?: number;
   ora?: number;
+  siusip?: number;
   total?: number;
 }
 

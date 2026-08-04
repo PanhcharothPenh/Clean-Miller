@@ -209,13 +209,20 @@ export default function SoftenerRecordsView({
             ? match.total 
             : ((match?.comfort || 0) + (match?.ora || 0)));
 
+      const comfortVal = match?.comfort !== undefined ? match.comfort : 0;
+      const oraVal = match?.ora !== undefined ? match.ora : 0;
+      const siusipVal = match?.siusip !== undefined ? match.siusip : 0;
+
       rows.push({
         day,
         date: dateStr,
         label: formatDayLabel(day),
         inQty: match?.inQty !== undefined ? match.inQty : 0,
-        outQty: computedOut,
-        total: computedOut,
+        comfort: comfortVal,
+        ora: oraVal,
+        siusip: siusipVal,
+        outQty: computedOut > 0 ? computedOut : (comfortVal + oraVal + siusipVal),
+        total: computedOut > 0 ? computedOut : (comfortVal + oraVal + siusipVal),
         note: match?.note || '',
         exists: !!match,
         recordId: match?.id || null,
@@ -228,7 +235,7 @@ export default function SoftenerRecordsView({
   // ----------------------------------------------------
   // RECALCULATIONS & CELL EDITING
   // ----------------------------------------------------
-  const handleCellChange = (dayIndex: number, field: 'inQty' | 'outQty' | 'note', value: any) => {
+  const handleCellChange = (dayIndex: number, field: 'inQty' | 'outQty' | 'comfort' | 'ora' | 'siusip' | 'note', value: any) => {
     const updated = [...localRows];
     const target = { ...updated[dayIndex] };
 
@@ -239,7 +246,13 @@ export default function SoftenerRecordsView({
       target[field] = num;
     }
 
-    if (field === 'outQty') {
+    if (['comfort', 'ora', 'siusip'].includes(field)) {
+      const c = target.comfort || 0;
+      const o = target.ora || 0;
+      const s = target.siusip || 0;
+      target.outQty = c + o + s;
+      target.total = target.outQty;
+    } else if (field === 'outQty') {
       target.total = target.outQty;
     }
 
@@ -252,6 +265,9 @@ export default function SoftenerRecordsView({
   const sumInQty = useMemo(() => localRows.reduce((a, b) => a + (b.inQty || 0), 0), [localRows]);
   
   
+  const sumComfort = useMemo(() => localRows.reduce((a, b) => a + (b.comfort || 0), 0), [localRows]);
+  const sumOra = useMemo(() => localRows.reduce((a, b) => a + (b.ora || 0), 0), [localRows]);
+  const sumSiusip = useMemo(() => localRows.reduce((a, b) => a + (b.siusip || 0), 0), [localRows]);
   const sumOutQty = useMemo(() => localRows.reduce((a, b) => a + (b.outQty || 0), 0), [localRows]);
   const sumTotal = useMemo(() => localRows.reduce((a, b) => a + (b.total || 0), 0), [localRows]);
 
@@ -816,15 +832,43 @@ export default function SoftenerRecordsView({
                         </td>
 
                         {/* ទឹកក្រអូបចេញ (Out) Input */}
-                        <td className="py-1.5 px-2 border-r border-slate-300 bg-pink-50/10 text-center">
+                        
+                        {/* Comfort Brand Input */}
+                        <td className="py-1.5 px-2 border-r border-slate-300 bg-purple-50/20 text-center">
                           <input
                             type="number"
-                            value={row.outQty === 0 ? '' : row.outQty}
-                            onChange={(e) => handleCellChange(index, 'outQty', e.target.value)}
+                            value={row.comfort === 0 ? '' : row.comfort}
+                            onChange={(e) => handleCellChange(index, 'comfort', e.target.value)}
                             onBlur={() => handleInputBlur(index)}
                             min="0"
                             placeholder="0"
-                            className="w-full max-w-[80px] mx-auto text-center font-bold font-mono text-pink-700 bg-white border border-slate-300 rounded-lg px-1.5 py-1 focus:ring-1 focus:ring-pink-500 focus:outline-none focus:border-pink-500"
+                            className="w-full max-w-[70px] mx-auto text-center font-black font-mono text-purple-900 bg-white border border-purple-200 rounded-lg px-1.5 py-1 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                          />
+                        </td>
+
+                        {/* Ora Brand Input */}
+                        <td className="py-1.5 px-2 border-r border-slate-300 bg-purple-50/20 text-center">
+                          <input
+                            type="number"
+                            value={row.ora === 0 ? '' : row.ora}
+                            onChange={(e) => handleCellChange(index, 'ora', e.target.value)}
+                            onBlur={() => handleInputBlur(index)}
+                            min="0"
+                            placeholder="0"
+                            className="w-full max-w-[70px] mx-auto text-center font-black font-mono text-purple-900 bg-white border border-purple-200 rounded-lg px-1.5 py-1 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                          />
+                        </td>
+
+                        {/* Siusip Brand Input */}
+                        <td className="py-1.5 px-2 border-r border-slate-300 bg-purple-50/20 text-center">
+                          <input
+                            type="number"
+                            value={row.siusip === 0 ? '' : row.siusip}
+                            onChange={(e) => handleCellChange(index, 'siusip', e.target.value)}
+                            onBlur={() => handleInputBlur(index)}
+                            min="0"
+                            placeholder="0"
+                            className="w-full max-w-[70px] mx-auto text-center font-black font-mono text-purple-900 bg-white border border-purple-200 rounded-lg px-1.5 py-1 focus:ring-1 focus:ring-purple-500 focus:outline-none"
                           />
                         </td>
 
@@ -873,14 +917,16 @@ export default function SoftenerRecordsView({
 
                   {/* Cumulative Monthly Totals row */}
                   <tr className="bg-sky-700 text-white font-extrabold text-xs">
-                    <td className="py-2.5 px-4 border-r border-sky-500 text-center">{lang === 'en' ? 'Total:' : 'សរុប៖'}</td>
-                    <td className="py-2.5 px-3 text-center border-r border-sky-500 bg-sky-800">{sumInQty}</td>
-                    <td className="py-2.5 px-3 text-center border-r border-sky-500 bg-sky-800">{sumOutQty}</td>
-                    <td className="py-2.5 px-4 border-r border-sky-500 text-left font-sans italic text-[10px] text-sky-100 font-medium">
-                      {selectedBranchName} - Veng Sreng Boulevard
+                    <td className="py-2.5 px-3 border-r border-sky-500 text-center">{lang === 'en' ? 'Total:' : 'សរុប៖'}</td>
+                    <td className="py-2.5 px-2.5 text-center border-r border-sky-500 bg-sky-800">{sumInQty}</td>
+                    <td className="py-2.5 px-2.5 text-center border-r border-sky-500 bg-purple-900 text-purple-100 font-black">{sumComfort}</td>
+                    <td className="py-2.5 px-2.5 text-center border-r border-sky-500 bg-purple-900 text-purple-100 font-black">{sumOra}</td>
+                    <td className="py-2.5 px-2.5 text-center border-r border-sky-500 bg-purple-900 text-purple-100 font-black">{sumSiusip}</td>
+                    <td className="py-2.5 px-3 border-r border-sky-500 text-left font-sans italic text-[10px] text-sky-100 font-medium">
+                      {selectedBranchName}
                     </td>
-                    <td className="py-2.5 px-4 text-center text-red-100 bg-red-800/80 font-black text-sm">{sumTotal}</td>
-                    <td className="py-2.5 px-4 print:hidden"></td>
+                    <td className="py-2.5 px-3 text-center text-red-100 bg-red-800/80 font-black text-sm">{sumTotal}</td>
+                    <td className="py-2.5 px-3 print:hidden"></td>
                   </tr>
                 </tbody>
               </table>
@@ -1234,61 +1280,67 @@ export default function SoftenerRecordsView({
 
                 {/* Exact replication grid */}
                 <div className="mt-2 relative z-10 overflow-hidden rounded-xl border border-slate-350 shadow-xs">
-                  <table className="w-full border-collapse">
+                  <table className="w-full border-collapse border border-slate-300">
                     <thead>
-                      <tr className="bg-sky-600 text-white text-[11px] font-bold border-b border-sky-700">
-                        <th rowSpan={2} className="py-2.5 px-2 border-r border-sky-500 text-center w-[110px] font-black">
-                          <span className="flex items-center justify-center gap-1">📅 {lang === 'en' ? 'Date' : 'ថ្ងៃ'}</span>
+                      <tr className="bg-purple-800 text-white text-[11px] font-bold border-b border-purple-900">
+                        <th rowSpan={2} className="py-2 px-2 border-r border-purple-600 text-center w-[100px] font-black">
+                          📅 {lang === 'en' ? 'Date' : 'ថ្ងៃ'}
                         </th>
-                        <th colSpan={2} className="py-1.5 px-2 border-r border-sky-500 border-b border-sky-500 text-center font-black">
-                          {lang === 'en' ? 'Quantity' : 'ចំនួន'}
+                        <th rowSpan={2} className="py-2 px-1 border-r border-purple-600 text-center w-[75px] font-black">
+                          🛢️ {lang === 'en' ? 'Stock In' : 'ចូល'}
                         </th>
-                        <th rowSpan={2} className="py-2.5 px-2 border-r border-sky-500 text-left min-w-[150px] font-black">
-                          <span className="flex items-center gap-1">💰 {lang === 'en' ? 'Note' : 'ចំណាំ'}</span>
+                        <th colSpan={3} className="py-1.5 px-2 border-r border-purple-600 border-b border-purple-600 text-center font-black bg-purple-900/90">
+                          🌸 {lang === 'en' ? 'Softener Brands Usage' : 'ទឹកក្រអូបប្រើប្រាស់តាមម៉ាក'}
                         </th>
-                        <th rowSpan={2} className="py-2.5 px-2 text-center w-[95px] font-black">
-                          <span className="flex items-center justify-center gap-1">📊 {lang === 'en' ? 'Total' : 'សរុប'}</span>
+                        <th rowSpan={2} className="py-2 px-2 border-r border-purple-600 text-left min-w-[120px] font-black">
+                          📝 {lang === 'en' ? 'Note' : 'ចំណាំ'}
+                        </th>
+                        <th rowSpan={2} className="py-2 px-2 text-center w-[85px] font-black bg-purple-950">
+                          📊 {lang === 'en' ? 'Total Out' : 'សរុប'}
                         </th>
                       </tr>
-                      <tr className="bg-sky-500 text-white text-[10px] font-bold border-b border-sky-600">
-                        <th className="py-1.5 px-1 border-r border-sky-400 text-center w-[90px] font-bold">
-                          <span className="flex items-center justify-center gap-0.5">🛢️ {lang === 'en' ? 'In' : 'ចូល'}</span>
-                        </th>
-                        <th className="py-1.5 px-1 border-r border-sky-400 text-center w-[90px] font-bold">
-                          <span className="flex items-center justify-center gap-0.5">🧼 {lang === 'en' ? 'Softener' : 'ទឹកក្រអូប'}</span>
-                        </th>
+                      <tr className="bg-purple-700 text-white text-[10px] font-bold border-b border-purple-800">
+                        <th className="py-1 px-1 border-r border-purple-500 text-center w-[65px] font-extrabold bg-purple-800/80">Comfort</th>
+                        <th className="py-1 px-1 border-r border-purple-500 text-center w-[65px] font-extrabold bg-purple-800/80">Ora</th>
+                        <th className="py-1 px-1 border-r border-purple-500 text-center w-[65px] font-extrabold bg-purple-800/80">Siusip</th>
                       </tr>
                     </thead>
-                    <tbody className="text-[10px] text-slate-800 font-mono divide-y divide-slate-350">
+                    <tbody className="text-[10px] text-slate-800 font-mono divide-y divide-slate-300">
                       {localRows.map((r, i) => (
-                        <tr key={i} className="hover:bg-slate-50/50 odd:bg-white even:bg-slate-50/20" style={{ height: '17px' }}>
-                          <td className="py-1.5 px-2 text-center border-r border-slate-355 font-bold text-slate-700">{r.label}</td>
-                          <td className="py-1.5 px-1 text-center border-r border-slate-355 font-extrabold text-teal-850 bg-emerald-50/10">
+                        <tr key={i} className="hover:bg-slate-50/50 odd:bg-white even:bg-slate-50/20" style={{ height: '20px' }}>
+                          <td className="py-1 px-2 text-center border-r border-slate-300 font-bold text-slate-700">{r.label}</td>
+                          <td className="py-1 px-1 text-center border-r border-slate-300 font-extrabold text-teal-800 bg-emerald-50/20">
                             {r.inQty > 0 ? r.inQty : ''}
                           </td>
-                          <td className="py-1.5 px-1 text-center border-r border-slate-355 font-bold text-slate-800">
-                            {r.outQty > 0 ? r.outQty : ''}
+                          <td className="py-1 px-1 text-center border-r border-slate-300 font-black text-purple-900 bg-purple-50/10">
+                            {r.comfort > 0 ? r.comfort : ''}
                           </td>
-                          <td className="py-1.5 px-3 text-left border-r border-slate-355 font-sans text-slate-600 text-[9px] truncate max-w-[180px]">
+                          <td className="py-1 px-1 text-center border-r border-slate-300 font-black text-purple-900 bg-purple-50/10">
+                            {r.ora > 0 ? r.ora : ''}
+                          </td>
+                          <td className="py-1 px-1 text-center border-r border-slate-300 font-black text-purple-900 bg-purple-50/10">
+                            {r.siusip > 0 ? r.siusip : ''}
+                          </td>
+                          <td className="py-1 px-2 text-left border-r border-slate-300 font-sans text-slate-600 text-[9px] truncate max-w-[150px]">
                             {r.note || ''}
                           </td>
-                          <td className="py-1.5 px-2 text-center font-black text-red-700 bg-red-50/10 text-[11px]">
+                          <td className="py-1 px-2 text-center font-black text-red-700 bg-red-50/20 text-[11px]">
                             {r.total > 0 ? r.total : ''}
                           </td>
                         </tr>
                       ))}
 
-                      {/* Cumulative Total Row matching the physical document */}
-                      <tr className="bg-sky-600 text-white font-extrabold text-[11px] border-t-2 border-sky-700">
-                        <td className="py-2.5 px-2 text-center border-r border-sky-500 font-black">
-                          <span className="flex items-center justify-center gap-1">🧮 TOTAL:</span>
+                      {/* Cumulative Total Row */}
+                      <tr className="bg-purple-800 text-white font-extrabold text-[11px] border-t-2 border-purple-900">
+                        <td className="py-2 px-2 text-center border-r border-purple-600 font-black">TOTAL:</td>
+                        <td className="py-2 px-1 text-center border-r border-purple-600 bg-purple-900 font-extrabold text-emerald-200">{sumInQty}</td>
+                        <td className="py-2 px-1 text-center border-r border-purple-600 bg-purple-950 font-extrabold text-purple-200">{sumComfort}</td>
+                        <td className="py-2 px-1 text-center border-r border-purple-600 bg-purple-950 font-extrabold text-purple-200">{sumOra}</td>
+                        <td className="py-2 px-1 text-center border-r border-purple-600 bg-purple-950 font-extrabold text-purple-200">{sumSiusip}</td>
+                        <td className="py-2 px-2 text-left border-r border-purple-600 font-sans font-bold text-[9px] bg-purple-900 text-purple-100">
+                          📍 {selectedBranchName}
                         </td>
-                        <td className="py-2.5 px-1 text-center border-r border-sky-500 bg-sky-700 font-extrabold">{sumInQty}</td>
-                        <td className="py-2.5 px-1 text-center border-r border-sky-500 bg-sky-700 font-extrabold">{sumOutQty}</td>
-                        <td className="py-2.5 px-3 text-left border-r border-sky-500 font-sans font-bold text-[9.5px] bg-sky-50 text-sky-950">
-                          <span className="flex items-center gap-1">📍 {selectedBranchName} ({selectedBranchAddress})</span>
-                        </td>
-                        <td className="py-2.5 px-2 text-center font-black text-red-800 text-[13px] bg-red-100 border-l border-sky-500 rounded-br-lg">{sumTotal}</td>
+                        <td className="py-2 px-2 text-center font-black text-red-100 text-[13px] bg-rose-900 border-l border-purple-600">{sumTotal}</td>
                       </tr>
                     </tbody>
                   </table>
