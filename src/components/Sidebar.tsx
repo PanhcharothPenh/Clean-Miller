@@ -248,9 +248,9 @@ export default function Sidebar({
   const favoritesExpanded = isGroupExpanded('clean24_favorites_group');
 
   return (
-    <aside className="w-full h-full bg-white text-slate-650 border-r border-slate-100 flex flex-col justify-between overflow-hidden">
+    <aside className="w-full h-full bg-white/95 backdrop-blur-md text-slate-700 border-r border-slate-200/80 flex flex-col justify-between overflow-hidden shadow-xs">
         {/* Top Header Branding Component */}
-        <div className="p-4.5 border-b border-slate-100 bg-white">
+        <div className="p-4.5 border-b border-slate-200/70 bg-white/50">
           <div className="flex items-center justify-between mb-3.5">
             <div className="flex flex-col gap-0.5">
               <Clean24Logo className="h-7.5 cursor-pointer" lightMode={true} />
@@ -259,7 +259,7 @@ export default function Sidebar({
             {/* Lang switcher */}
             <button 
               onClick={() => setLang(lang === 'en' ? 'kh' : 'en')}
-              className="px-2 py-0.5 text-[10px] font-bold rounded-lg bg-slate-50 hover:bg-slate-100 hover:text-slate-850 border border-slate-200/60 text-slate-600 transition-colors cursor-pointer"
+              className="px-2.5 py-1 text-[10px] font-extrabold rounded-lg bg-slate-100/80 hover:bg-slate-200 text-slate-700 border border-slate-200/80 transition-all cursor-pointer shadow-2xs"
               id="lang_switch_btn"
             >
               {lang === 'en' ? 'KH 🇰🇭' : 'EN 🇺🇸'}
@@ -267,7 +267,7 @@ export default function Sidebar({
           </div>
 
           {/* Active Branch Select Form */}
-          <div className="mt-3.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+          <div className="mt-3.5 bg-slate-50/90 p-2.5 rounded-xl border border-slate-200/70 shadow-2xs">
             <label className="text-[9px] text-slate-400 uppercase tracking-widest block mb-1 font-bold">
               {t.activeBranch}
             </label>

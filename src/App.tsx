@@ -942,7 +942,7 @@ export default function App() {
       <div className="flex-1 min-w-0 flex flex-col overflow-x-hidden">
         
         {/* Top Header Segment bar */}
-        <header className="bg-white border-b border-slate-100 px-6 py-2.5 flex items-center justify-between sticky top-0 z-30" id="header_saas_bar">
+        <header className="bg-white/85 backdrop-blur-md border-b border-slate-200/80 px-6 py-3 flex items-center justify-between sticky top-0 z-30 shadow-xs" id="header_saas_bar">
           
           {/* Menu Trigger and Title details */}
           <div className="flex items-center gap-3">

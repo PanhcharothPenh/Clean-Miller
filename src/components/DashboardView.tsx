@@ -200,7 +200,7 @@ export default function DashboardView({
         </div>
 
         {/* Card 3: Active Staff & Operations */}
-        <div className="bg-white border border-slate-150 rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all space-y-4">
+        <div className="glassmorphism-card rounded-3xl p-6 shadow-sm card-hover-effect space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-black tracking-widest text-slate-400 uppercase">
               {lang === 'en' ? "ACTIVE STAFF" : "បុគ្គលិកកំពុងធ្វើការ"}
@@ -226,7 +226,7 @@ export default function DashboardView({
         </div>
 
         {/* Card 4: Coin Vault Balance */}
-        <div className="bg-white border border-slate-150 rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-amber-200 transition-all space-y-4">
+        <div className="glassmorphism-card rounded-3xl p-6 shadow-sm card-hover-effect space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-black tracking-widest text-slate-400 uppercase">
               {lang === 'en' ? "COIN VAULT BALANCE" : "កាក់ក្នុងទូសរុប"}
