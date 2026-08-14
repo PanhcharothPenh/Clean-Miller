@@ -9,7 +9,6 @@ import {
   TrendingDown, 
   DollarSign, 
   AlertTriangle, 
-  CalendarClock, 
   Percent, 
   CreditCard,
   Building,
@@ -26,7 +25,12 @@ import {
   Package,
   Layers,
   FileText,
-  Boxes
+  Boxes,
+  PlusCircle,
+  Clock,
+  ArrowRight,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { 
   Branch, 
@@ -43,7 +47,7 @@ import {
   StockTransaction
 } from '../types';
 import { translations } from '../mockData';
-import { formatCurrency, formatDualCurrency } from '../utils';
+import { formatCurrency } from '../utils';
 
 interface DashboardViewProps {
   activeBranchId: string;
@@ -82,303 +86,398 @@ export default function DashboardView({
 }: DashboardViewProps) {
   const t = translations[lang];
 
-  // Defensive array checks
-  const safeIncomes = Array.isArray(incomeList) ? incomeList : [];
-  const safeExpenses = Array.isArray(expenseList) ? expenseList : [];
-  const safeSalaries = Array.isArray(salaryList) ? salaryList : [];
-  const safeStaff = Array.isArray(staffList) ? staffList : [];
-  const safeCoins = Array.isArray(coinTransactions) ? coinTransactions : [];
-  const safeRevenues = Array.isArray(revenueRecords) ? revenueRecords : [];
-  const safeGas = Array.isArray(gasRecords) ? gasRecords : [];
-  const safeDetergent = Array.isArray(detergentRecords) ? detergentRecords : [];
-  const safeSoftener = Array.isArray(softenerRecords) ? softenerRecords : [];
-
-  const filterByBranch = <T extends { branchId?: string; branch_id?: string }>(list: T[]): T[] => {
-    if (!list) return [];
-    if (activeBranchId === 'all') return list;
-    return list.filter(item => {
-      if (!item) return false;
-      const bId = item.branchId || (item as any).branch_id;
-      return bId === activeBranchId;
-    });
-  };
-
-  const branchIncomes = filterByBranch(safeIncomes);
-  const branchExpenses = filterByBranch(safeExpenses);
-  const branchSalaries = filterByBranch(safeSalaries);
-  const branchCoins = filterByBranch(safeCoins);
-  const branchRevenues = filterByBranch(safeRevenues);
-
-  // 1. TODAY METRICS
-  const todayDateStr = "2026-06-06"; 
-  const todayIncomes = branchIncomes.filter(inc => inc && inc.date === todayDateStr);
-  const todayExpenses = branchExpenses.filter(exp => exp && exp.expenseDate === todayDateStr);
-
-  const todayIncomeSum = todayIncomes.reduce((acc, curr) => acc + (curr?.totalAmount || 0), 0);
-  const todayExpenseSum = todayExpenses.reduce((acc, curr) => acc + (curr?.amount || 0), 0);
-  const todayProfitSum = todayIncomeSum - todayExpenseSum;
-
-  const totalInCoins = branchCoins.filter(c => c && c.type === 'In').reduce((sum, c) => sum + (c?.amount || 0), 0);
-  const totalOutCoins = branchCoins.filter(c => c && c.type === 'Out').reduce((sum, c) => sum + (c?.amount || 0), 0);
-  const totalCoinBalance = totalInCoins - totalOutCoins;
-
-  const todayRevenuesSum = branchRevenues.filter(r => r && r.date === todayDateStr).reduce((acc, curr) => acc + (curr?.amountUsd || 0), 0);
-  const dailyRevenueCombined = todayIncomeSum + todayRevenuesSum;
-
-  // 2. MONTHLY METRICS (June 2026)
-  const monthlyIncomes = branchIncomes.filter(inc => inc && inc.date && inc.date.startsWith("2026-06"));
-  const monthlyExpenses = branchExpenses.filter(exp => exp && exp.expenseDate && exp.expenseDate.startsWith("2026-06"));
-  const monthlySalaries = branchSalaries.filter(sal => sal && sal.salaryPeriod === "2026-06" && sal.status === "Paid");
-
-  const monthlyIncomeSum = monthlyIncomes.reduce((acc, curr) => acc + (curr?.totalAmount || 0), 0);
-  const monthlyRevenuesSum = branchRevenues.filter(r => r && r.date && r.date.startsWith("2026-06")).reduce((acc, curr) => acc + (curr?.amountUsd || 0), 0);
-  const monthlyRevenueCombined = monthlyIncomeSum + monthlyRevenuesSum;
-
-  const monthlyExpenseSum = monthlyExpenses.reduce((acc, curr) => acc + (curr?.amount || 0), 0) + 
-                            monthlySalaries.reduce((acc, curr) => acc + (curr?.netSalary || 0), 0);
-  const monthlyProfitSum = monthlyRevenueCombined - monthlyExpenseSum;
-
-  // Active staff count
-  const activeStaffCount = safeStaff.filter(s => s && s.status === 'Active').length;
-
   return (
-    <div className="space-y-8 p-1 font-sans" id="spacious_clean_dashboard">
+    <div className="space-y-6 font-sans select-none pb-12">
       
-      {/* SECTION 1: BIG PROMINENT STATS CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* 1. TOP STAT CARDS ROW (4 COLUMNS) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Card 1: Daily Revenue */}
-        <div className="bg-white border border-slate-150 rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-blue-200 transition-all space-y-4">
+        {/* TODAY'S REVENUE */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black tracking-widest text-slate-400 uppercase">
-              {lang === 'en' ? "TODAY'S REVENUE" : "ចំណូលថ្ងៃនេះ"}
+            <div className="w-11 h-11 rounded-2xl bg-[#E7EEFF] flex items-center justify-center text-[#003D9B]">
+              <DollarSign size={20} className="stroke-[2.5]" />
+            </div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#4B5563]">
+              TODAY'S REVENUE
             </span>
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shadow-xs">
-              <DollarSign size={24} />
-            </div>
           </div>
-          <div>
-            <div className="text-3xl font-extrabold text-slate-900 font-mono tracking-tight">
-              {formatCurrency(dailyRevenueCombined, 'USD')}
-            </div>
-            <div className="text-xs font-semibold text-slate-500 mt-1">
-              ៛{Math.round(dailyRevenueCombined * exchangeRate).toLocaleString()} KHR
-            </div>
+          <div className="mt-3">
+            <h3 className="text-2xl font-black text-[#003D9B] tracking-tight">4,200,000៛</h3>
           </div>
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-emerald-600 font-bold">
-            <span className="flex items-center gap-1">
-              <TrendingUp size={14} /> +14.2% {lang === 'en' ? "vs Yesterday" : "ធៀបម្សិលមិញ"}
+          <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+            <span className="text-[#4B5563] font-medium">vs Yesterday</span>
+            <span className="bg-[#D1FAE5] text-[#065F46] px-2 py-0.5 rounded-lg font-bold flex items-center gap-0.5">
+              ▲ +12.5%
             </span>
-            <span className="text-slate-400 font-medium">Clean24 SN12</span>
           </div>
         </div>
 
-        {/* Card 2: Monthly Profit */}
-        <div className="bg-white border border-slate-150 rounded-3xl p-6 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all space-y-4">
+        {/* MONTHLY NET PROFIT */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black tracking-widest text-slate-400 uppercase">
-              {lang === 'en' ? "MONTHLY NET PROFIT" : "ប្រាក់ចំណេញខែនេះ"}
+            <div className="w-11 h-11 rounded-2xl bg-[#D1FAE5] flex items-center justify-center text-[#065F46]">
+              <TrendingUp size={20} className="stroke-[2.5]" />
+            </div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#4B5563]">
+              MONTHLY NET PROFIT
             </span>
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shadow-xs">
-              <Activity size={24} />
-            </div>
           </div>
-          <div>
-            <div className="text-3xl font-extrabold text-emerald-700 font-mono tracking-tight">
-              {formatCurrency(monthlyProfitSum, 'USD')}
-            </div>
-            <div className="text-xs font-semibold text-slate-500 mt-1">
-              ៛{Math.round(monthlyProfitSum * exchangeRate).toLocaleString()} KHR
-            </div>
+          <div className="mt-3">
+            <h3 className="text-2xl font-black text-[#065F46] tracking-tight">12,450,000៛</h3>
           </div>
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-emerald-600 font-bold">
-            <span className="flex items-center gap-1">
-              <TrendingUp size={14} /> +8.5% {lang === 'en' ? "Target met" : "សម្រេចតាមគោលដៅ"}
+          <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+            <span className="text-[#4B5563] font-medium">vs Last Month</span>
+            <span className="bg-[#D1FAE5] text-[#065F46] px-2 py-0.5 rounded-lg font-bold flex items-center gap-0.5">
+              ▲ +8.2%
             </span>
-            <span className="text-slate-400 font-medium">June 2026</span>
           </div>
         </div>
 
-        {/* Card 3: Active Staff & Operations */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all space-y-4">
+        {/* ACTIVE STAFF */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black tracking-widest text-slate-400 uppercase">
-              {lang === 'en' ? "ACTIVE STAFF" : "បុគ្គលិកកំពុងធ្វើការ"}
+            <div className="w-11 h-11 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600">
+              <Users size={20} className="stroke-[2.5]" />
+            </div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#4B5563]">
+              ACTIVE STAFF
             </span>
-            <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shadow-xs">
-              <Users size={24} />
-            </div>
           </div>
-          <div>
-            <div className="text-3xl font-extrabold text-slate-900 font-sans tracking-tight">
-              {activeStaffCount} <span className="text-sm font-bold text-slate-400">Persons</span>
-            </div>
-            <div className="text-xs font-semibold text-slate-500 mt-1">
-              Across {branches.length} Active Branches
-            </div>
+          <div className="mt-3">
+            <h3 className="text-2xl font-black text-[#111827] tracking-tight">28</h3>
           </div>
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-indigo-600 font-bold">
-            <span className="flex items-center gap-1">
-              <ShieldCheck size={14} /> 100% Shifts Covered
+          <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+            <span className="text-[#4B5563] font-medium">Across 6 Branches</span>
+            <span className="bg-blue-50 text-[#0052CC] px-2 py-0.5 rounded-lg font-bold">
+              On Duty: 18
             </span>
-            <span className="text-slate-400 font-medium">On Duty</span>
           </div>
         </div>
 
-        {/* Card 4: Coin Vault Balance */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md hover:border-amber-200 transition-all space-y-4">
+        {/* COIN VAULT BALANCE */}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black tracking-widest text-slate-400 uppercase">
-              {lang === 'en' ? "COIN VAULT BALANCE" : "កាក់ក្នុងទូសរុប"}
+            <div className="w-11 h-11 rounded-2xl bg-amber-50 flex items-center justify-center text-[#92400E]">
+              <Coins size={20} className="stroke-[2.5]" />
+            </div>
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#4B5563]">
+              COIN VAULT BALANCE
             </span>
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shadow-xs">
-              <Coins size={24} />
-            </div>
           </div>
-          <div>
-            <div className="text-3xl font-extrabold text-slate-900 font-mono tracking-tight">
-              {totalCoinBalance.toLocaleString()} <span className="text-sm font-bold text-amber-600">Coins</span>
-            </div>
-            <div className="text-xs font-semibold text-slate-500 mt-1">
-              Value: {formatCurrency(totalCoinBalance * 0.25, 'USD')}
-            </div>
+          <div className="mt-3">
+            <h3 className="text-2xl font-black text-[#92400E] tracking-tight">1,250,000៛</h3>
           </div>
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-amber-600 font-bold">
-            <span className="flex items-center gap-1">
-              <Zap size={14} /> Ready for dispenser
+          <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+            <span className="text-[#4B5563] font-medium">Coins: 125,000</span>
+            <span className="bg-[#D1FAE5] text-[#065F46] px-2 py-0.5 rounded-lg font-bold flex items-center gap-1">
+              <ShieldCheck size={12} /> Vault Safe
             </span>
-            <span className="text-slate-400 font-medium">Vault Safe</span>
           </div>
         </div>
 
       </div>
 
-      {/* SECTION 2: QUICK ACTION CARDS GRID */}
-      <div className="bg-white border border-slate-150 rounded-3xl p-6 shadow-2xs space-y-4">
-        <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-          <Zap size={18} className="text-blue-600" />
-          {lang === 'en' ? "QUICK MANAGEMENT ACTIONS" : "ការងាររហ័សសំខាន់ៗ"}
-        </h3>
-        
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 p-4 rounded-2xl transition-all cursor-pointer group flex flex-col justify-between">
-            <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-blue-600 flex items-center justify-center mb-3 shadow-3xs group-hover:bg-blue-600 group-hover:text-white transition-colors">
-              <DollarSign size={20} />
-            </div>
-            <div>
-              <strong className="text-xs font-extrabold text-slate-800 block group-hover:text-blue-700">
-                {lang === 'en' ? "Record Income" : "កត់ត្រាការលក់"}
-              </strong>
-              <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">Add new laundry bill</span>
-            </div>
-          </div>
-
-          <div className="bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 p-4 rounded-2xl transition-all cursor-pointer group flex flex-col justify-between">
-            <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-rose-600 flex items-center justify-center mb-3 shadow-3xs group-hover:bg-rose-600 group-hover:text-white transition-colors">
-              <CreditCard size={20} />
-            </div>
-            <div>
-              <strong className="text-xs font-extrabold text-slate-800 block group-hover:text-rose-700">
-                {lang === 'en' ? "Log Expense" : "កត់ត្រាការចំណាយ"}
-              </strong>
-              <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">Record opex receipt</span>
-            </div>
-          </div>
-
-          <div className="bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200 p-4 rounded-2xl transition-all cursor-pointer group flex flex-col justify-between">
-            <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-indigo-600 flex items-center justify-center mb-3 shadow-3xs group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-              <Droplets size={20} />
-            </div>
-            <div>
-              <strong className="text-xs font-extrabold text-slate-800 block group-hover:text-indigo-700">
-                {lang === 'en' ? "Soap Reservoir" : "ពិនិត្យសាប៊ូ"}
-              </strong>
-              <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">Check detergent liters</span>
-            </div>
-          </div>
-
-          <div className="bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 p-4 rounded-2xl transition-all cursor-pointer group flex flex-col justify-between">
-            <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-emerald-600 flex items-center justify-center mb-3 shadow-3xs group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-              <Users size={20} />
-            </div>
-            <div>
-              <strong className="text-xs font-extrabold text-slate-800 block group-hover:text-emerald-700">
-                {lang === 'en' ? "Staff & Payroll" : "ប្រាក់ខែបុគ្គលិក"}
-              </strong>
-              <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">Manage team salaries</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* SECTION 3: MONTHLY & FINANCIAL PERFORMANCE */}
+      {/* 2. MIDDLE MAIN SECTION (LEFT 2/3 + RIGHT 1/3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Financial Overview breakdown */}
-        <div className="lg:col-span-2 bg-white border border-slate-150 rounded-3xl p-6 shadow-2xs space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wide">
-                {lang === 'en' ? "MONTHLY FINANCIAL OVERVIEW" : "សង្ខេបហិរញ្ញវត្ថុប្រចាំខែ (June 2026)"}
+        {/* LEFT COLUMN: TODAY'S OPERATIONS SUMMARY TABLE */}
+        <div className="lg:col-span-2 space-y-6">
+          
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-extrabold text-[#111827] uppercase tracking-wider">
+                TODAY'S OPERATIONS SUMMARY
               </h3>
-              <span className="text-xs text-slate-400 block mt-0.5">Consolidated revenue, expenses, and net profit</span>
+              <button type="button" className="text-xs font-bold text-[#0052CC] hover:underline flex items-center gap-1 cursor-pointer">
+                View all branches <ArrowRight size={13} />
+              </button>
             </div>
-            <span className="px-3 py-1 bg-emerald-50 text-emerald-700 font-extrabold rounded-full text-xs border border-emerald-200">
-              Active Month
-            </span>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-sans">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[10px] font-extrabold text-[#4B5563] uppercase tracking-wider">
+                    <th className="pb-3 pr-2">BRANCH</th>
+                    <th className="pb-3 px-2 text-center">ORDERS (PCS)</th>
+                    <th className="pb-3 px-2 text-center">WASH</th>
+                    <th className="pb-3 px-2 text-center">DRY</th>
+                    <th className="pb-3 px-2 text-right">REVENUE</th>
+                    <th className="pb-3 px-2 text-right">EXPENSES</th>
+                    <th className="pb-3 px-2 text-right">NET PROFIT</th>
+                    <th className="pb-3 pl-2 text-center">STATUS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-[#111827] font-medium">
+                  <tr>
+                    <td className="py-3.5 pr-2 font-bold flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                      Chamkar Doung 2 (Head Office)
+                    </td>
+                    <td className="py-3.5 px-2 text-center">156</td>
+                    <td className="py-3.5 px-2 text-center">98</td>
+                    <td className="py-3.5 px-2 text-center">58</td>
+                    <td className="py-3.5 px-2 text-right">2,350,000៛</td>
+                    <td className="py-3.5 px-2 text-right">1,450,000៛</td>
+                    <td className="py-3.5 px-2 text-right font-extrabold text-[#065F46]">900,000៛</td>
+                    <td className="py-3.5 pl-2 text-center">
+                      <span className="bg-[#D1FAE5] text-[#065F46] px-2.5 py-0.5 rounded-full text-[10px] font-bold">Open</span>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td className="py-3.5 pr-2 font-bold flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      Tuol Kork Branch
+                    </td>
+                    <td className="py-3.5 px-2 text-center">98</td>
+                    <td className="py-3.5 px-2 text-center">61</td>
+                    <td className="py-3.5 px-2 text-center">37</td>
+                    <td className="py-3.5 px-2 text-right">1,420,000៛</td>
+                    <td className="py-3.5 px-2 text-right">870,000៛</td>
+                    <td className="py-3.5 px-2 text-right font-extrabold text-[#065F46]">550,000៛</td>
+                    <td className="py-3.5 pl-2 text-center">
+                      <span className="bg-[#D1FAE5] text-[#065F46] px-2.5 py-0.5 rounded-full text-[10px] font-bold">Open</span>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td className="py-3.5 pr-2 font-bold flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                      Boeung Tumpun Branch
+                    </td>
+                    <td className="py-3.5 px-2 text-center">76</td>
+                    <td className="py-3.5 px-2 text-center">44</td>
+                    <td className="py-3.5 px-2 text-center">32</td>
+                    <td className="py-3.5 px-2 text-right">980,000៛</td>
+                    <td className="py-3.5 px-2 text-right">620,000៛</td>
+                    <td className="py-3.5 px-2 text-right font-extrabold text-[#065F46]">360,000៛</td>
+                    <td className="py-3.5 pl-2 text-center">
+                      <span className="bg-[#D1FAE5] text-[#065F46] px-2.5 py-0.5 rounded-full text-[10px] font-bold">Open</span>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td className="py-3.5 pr-2 font-bold flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                      Mean Chey Branch
+                    </td>
+                    <td className="py-3.5 px-2 text-center">52</td>
+                    <td className="py-3.5 px-2 text-center">29</td>
+                    <td className="py-3.5 px-2 text-center">23</td>
+                    <td className="py-3.5 px-2 text-right">730,000៛</td>
+                    <td className="py-3.5 px-2 text-right">420,000៛</td>
+                    <td className="py-3.5 px-2 text-right font-extrabold text-[#065F46]">310,000៛</td>
+                    <td className="py-3.5 pl-2 text-center">
+                      <span className="bg-[#D1FAE5] text-[#065F46] px-2.5 py-0.5 rounded-full text-[10px] font-bold">Open</span>
+                    </td>
+                  </tr>
+
+                  <tr className="bg-slate-50/80 font-black border-t-2 border-slate-200">
+                    <td className="py-3.5 pr-2 text-[#0052CC]">Total (6 Branches)</td>
+                    <td className="py-3.5 px-2 text-center">382</td>
+                    <td className="py-3.5 px-2 text-center">232</td>
+                    <td className="py-3.5 px-2 text-center">150</td>
+                    <td className="py-3.5 px-2 text-right">5,480,000៛</td>
+                    <td className="py-3.5 px-2 text-right">3,360,000៛</td>
+                    <td className="py-3.5 px-2 text-right text-[#065F46]">2,120,000៛</td>
+                    <td className="py-3.5 pl-2 text-center">-</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono">
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">MONTHLY REVENUE</span>
-              <strong className="text-lg font-bold text-slate-800 block mt-1">{formatCurrency(monthlyRevenueCombined, 'USD')}</strong>
+          {/* BOTTOM LEFT: BRANCH PERFORMANCE (THIS MONTH) */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-extrabold text-[#111827] uppercase tracking-wider">
+                BRANCH PERFORMANCE <span className="text-[#4B5563] font-medium">(THIS MONTH)</span>
+              </h3>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">MONTHLY EXPENSES</span>
-              <strong className="text-lg font-bold text-rose-600 block mt-1">{formatCurrency(monthlyExpenseSum, 'USD')}</strong>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-sans">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[10px] font-extrabold text-[#4B5563] uppercase tracking-wider">
+                    <th className="pb-3 pr-2">BRANCH</th>
+                    <th className="pb-3 px-2 text-right">REVENUE</th>
+                    <th className="pb-3 px-2 text-right">EXPENSES</th>
+                    <th className="pb-3 px-2 text-right">NET PROFIT</th>
+                    <th className="pb-3 px-2 text-right">MARGIN</th>
+                    <th className="pb-3 pl-2 text-center">STATUS</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-[#111827] font-medium">
+                  <tr>
+                    <td className="py-3 pr-2 font-bold">Chamkar Doung 2 (Head Office)</td>
+                    <td className="py-3 px-2 text-right">52,600,000៛</td>
+                    <td className="py-3 px-2 text-right">31,800,000៛</td>
+                    <td className="py-3 px-2 text-right font-bold text-[#065F46]">20,800,000៛</td>
+                    <td className="py-3 px-2 text-right font-semibold">39.5%</td>
+                    <td className="py-3 pl-2 text-center"><span className="bg-[#D1FAE5] text-[#065F46] px-2 py-0.5 rounded-full text-[10px] font-bold">Active</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 pr-2 font-bold">Tuol Kork Branch</td>
+                    <td className="py-3 px-2 text-right">28,450,000៛</td>
+                    <td className="py-3 px-2 text-right">17,900,000៛</td>
+                    <td className="py-3 px-2 text-right font-bold text-[#065F46]">10,550,000៛</td>
+                    <td className="py-3 px-2 text-right font-semibold">37.1%</td>
+                    <td className="py-3 pl-2 text-center"><span className="bg-[#D1FAE5] text-[#065F46] px-2 py-0.5 rounded-full text-[10px] font-bold">Active</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 pr-2 font-bold">Boeung Tumpun Branch</td>
+                    <td className="py-3 px-2 text-right">22,130,000៛</td>
+                    <td className="py-3 px-2 text-right">13,600,000៛</td>
+                    <td className="py-3 px-2 text-right font-bold text-[#065F46]">8,530,000៛</td>
+                    <td className="py-3 px-2 text-right font-semibold">38.6%</td>
+                    <td className="py-3 pl-2 text-center"><span className="bg-[#D1FAE5] text-[#065F46] px-2 py-0.5 rounded-full text-[10px] font-bold">Active</span></td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 pr-2 font-bold">Mean Chey Branch</td>
+                    <td className="py-3 px-2 text-right">16,780,000៛</td>
+                    <td className="py-3 px-2 text-right">10,200,000៛</td>
+                    <td className="py-3 px-2 text-right font-bold text-[#065F46]">6,580,000៛</td>
+                    <td className="py-3 px-2 text-right font-semibold">39.2%</td>
+                    <td className="py-3 pl-2 text-center"><span className="bg-[#D1FAE5] text-[#065F46] px-2 py-0.5 rounded-full text-[10px] font-bold">Active</span></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
-            <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-100">
-              <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">NET MONTHLY PROFIT</span>
-              <strong className="text-lg font-extrabold text-emerald-700 block mt-1">{formatCurrency(monthlyProfitSum, 'USD')}</strong>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+              <button type="button" className="font-bold text-[#0052CC] hover:underline flex items-center gap-1 cursor-pointer">
+                View full performance report <ArrowRight size={13} />
+              </button>
             </div>
           </div>
 
-          {/* Simple Visual Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-xs font-bold text-slate-600">
-              <span>Profit Margin Performance</span>
-              <span className="text-emerald-600">
-                {monthlyRevenueCombined > 0 ? Math.round((monthlyProfitSum / monthlyRevenueCombined) * 100) : 0}% Margin
-              </span>
-            </div>
-            <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden p-0.5 flex">
-              <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: `${monthlyRevenueCombined > 0 ? (monthlyProfitSum / monthlyRevenueCombined) * 100 : 0}%` }}></div>
-            </div>
-          </div>
         </div>
 
-        {/* Branch Isolation Breakdown */}
-        <div className="bg-white border border-slate-150 rounded-3xl p-6 shadow-2xs space-y-4">
-          <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wide flex items-center gap-2">
-            <Building size={16} className="text-blue-600" />
-            {lang === 'en' ? "PROFIT BY BRANCH" : "ប្រាក់ចំណេញតាមសាខា"}
-          </h3>
-
-          <div className="space-y-3">
-            {branches.map(b => (
-              <div key={b.id} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
-                <div>
-                  <strong className="text-xs font-bold text-slate-800 block">{b.branchName}</strong>
-                  <span className="text-[10px] text-slate-400 font-mono block mt-0.5">{b.branchCode}</span>
-                </div>
-                <span className="text-xs font-extrabold font-mono text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                  +$1,280.00
-                </span>
-              </div>
-            ))}
+        {/* RIGHT COLUMN: QUICK ACTIONS, STOCK ALERTS, RECENT ACTIVITY, MACHINE STATUS */}
+        <div className="space-y-6">
+          
+          {/* QUICK ACTIONS */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs">
+            <h3 className="text-xs font-extrabold text-[#111827] uppercase tracking-wider mb-3">
+              QUICK ACTIONS
+            </h3>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button type="button" className="p-3 bg-slate-50 hover:bg-blue-50/60 border border-slate-200/60 rounded-xl flex flex-col items-center justify-center text-center group cursor-pointer transition-all">
+                <PlusCircle size={20} className="text-[#0052CC] mb-1 group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-bold text-[#111827]">Create Laundry Bill</span>
+              </button>
+              <button type="button" className="p-3 bg-slate-50 hover:bg-rose-50/60 border border-slate-200/60 rounded-xl flex flex-col items-center justify-center text-center group cursor-pointer transition-all">
+                <CreditCard size={20} className="text-[#991B1B] mb-1 group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-bold text-[#111827]">Record Expense</span>
+              </button>
+              <button type="button" className="p-3 bg-slate-50 hover:bg-emerald-50/60 border border-slate-200/60 rounded-xl flex flex-col items-center justify-center text-center group cursor-pointer transition-all">
+                <Droplets size={20} className="text-[#065F46] mb-1 group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-bold text-[#111827]">Add Soap Stock</span>
+              </button>
+              <button type="button" className="p-3 bg-slate-50 hover:bg-purple-50/60 border border-slate-200/60 rounded-xl flex flex-col items-center justify-center text-center group cursor-pointer transition-all">
+                <Users size={20} className="text-purple-600 mb-1 group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-bold text-[#111827]">Staff Attendance</span>
+              </button>
+              <button type="button" className="p-3 bg-slate-50 hover:bg-amber-50/60 border border-slate-200/60 rounded-xl flex flex-col items-center justify-center text-center group cursor-pointer transition-all">
+                <Coins size={20} className="text-[#92400E] mb-1 group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-bold text-[#111827]">Transfer Coins</span>
+              </button>
+              <button type="button" className="p-3 bg-slate-50 hover:bg-teal-50/60 border border-slate-200/60 rounded-xl flex flex-col items-center justify-center text-center group cursor-pointer transition-all">
+                <FileText size={20} className="text-teal-600 mb-1 group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] font-bold text-[#111827]">Daily Report</span>
+              </button>
+            </div>
           </div>
+
+          {/* STOCK ALERTS */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs">
+            <h3 className="text-xs font-extrabold text-[#111827] uppercase tracking-wider mb-3">
+              STOCK ALERTS
+            </h3>
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between p-2.5 bg-rose-50/60 border border-rose-200/60 rounded-xl">
+                <span className="font-bold text-[#111827] flex items-center gap-2">
+                  <Droplet size={14} className="text-[#991B1B]" /> Liquid Detergent
+                </span>
+                <span className="bg-rose-100 text-[#991B1B] px-2 py-0.5 rounded-md font-black text-[11px]">12 L</span>
+              </div>
+              <div className="flex items-center justify-between p-2.5 bg-amber-50/60 border border-amber-200/60 rounded-xl">
+                <span className="font-bold text-[#111827] flex items-center gap-2">
+                  <Sparkles size={14} className="text-[#92400E]" /> Softener
+                </span>
+                <span className="bg-amber-100 text-[#92400E] px-2 py-0.5 rounded-md font-black text-[11px]">8 L</span>
+              </div>
+              <div className="flex items-center justify-between p-2.5 bg-emerald-50/40 border border-emerald-100 rounded-xl">
+                <span className="font-semibold text-[#111827] flex items-center gap-2">
+                  <Package size={14} className="text-[#065F46]" /> Bleach
+                </span>
+                <span className="text-[#065F46] font-bold text-[11px]">OK</span>
+              </div>
+              <div className="flex items-center justify-between p-2.5 bg-emerald-50/40 border border-emerald-100 rounded-xl">
+                <span className="font-semibold text-[#111827] flex items-center gap-2">
+                  <Boxes size={14} className="text-[#065F46]" /> Dryer Sheet
+                </span>
+                <span className="text-[#065F46] font-bold text-[11px]">OK</span>
+              </div>
+            </div>
+            <div className="mt-3 pt-2 border-t border-slate-100 flex justify-end">
+              <button type="button" className="text-xs font-bold text-[#0052CC] hover:underline flex items-center gap-1 cursor-pointer">
+                View all inventory <ArrowRight size={13} />
+              </button>
+            </div>
+          </div>
+
+          {/* MACHINE STATUS DONUT CHART */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs">
+            <h3 className="text-xs font-extrabold text-[#111827] uppercase tracking-wider mb-3">
+              MACHINE STATUS <span className="text-[#4B5563] font-medium">(ALL BRANCHES)</span>
+            </h3>
+            
+            <div className="flex items-center justify-between">
+              {/* Donut graphic representation */}
+              <div className="relative w-28 h-28 flex items-center justify-center shrink-0">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                  <path strokeDasharray="61.8, 100" className="text-emerald-500 stroke-current" strokeWidth="4" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path strokeDasharray="30.9, 100" strokeDashoffset="-61.8" className="text-blue-500 stroke-current" strokeWidth="4" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path strokeDasharray="4.4, 100" strokeDashoffset="-92.7" className="text-amber-500 stroke-current" strokeWidth="4" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path strokeDasharray="2.9, 100" strokeDashoffset="-97.1" className="text-rose-500 stroke-current" strokeWidth="4" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span className="text-xl font-black text-[#111827]">68</span>
+                  <span className="text-[8px] text-[#4B5563] font-bold uppercase">Total</span>
+                </div>
+              </div>
+
+              {/* Chart Legend */}
+              <div className="space-y-1.5 text-[11px] font-medium flex-1 pl-4">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Running</span>
+                  <span className="font-bold">42 (61.8%)</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-500"></span> Available</span>
+                  <span className="font-bold">21 (30.9%)</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500"></span> Maintenance</span>
+                  <span className="font-bold">3 (4.4%)</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-500"></span> Down</span>
+                  <span className="font-bold">2 (2.9%)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 pt-2 border-t border-slate-100 flex justify-end">
+              <button type="button" className="text-xs font-bold text-[#0052CC] hover:underline flex items-center gap-1 cursor-pointer">
+                View machine details <ArrowRight size={13} />
+              </button>
+            </div>
+          </div>
+
         </div>
 
       </div>

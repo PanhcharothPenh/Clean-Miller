@@ -945,6 +945,7 @@ export default function App() {
         <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-30 shadow-xs" id="header_saas_bar">
           
           {/* Menu Trigger and Title details */}
+          {/* Header left: Title and Subtitle matching design mock screenshot */}
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setMobileMenuOpen(true)}
@@ -953,14 +954,13 @@ export default function App() {
               <Menu size={18} />
             </button>
             
-            <div className="flex items-center gap-2">
-              <div className="lg:hidden flex items-center gap-2">
-                <Clean24Logo className="h-6 cursor-pointer" lightMode={true} />
-                <div className="h-4 w-px bg-slate-200 self-center mx-1" />
-              </div>
-              <span className="text-xs font-extrabold text-slate-600 tracking-wide uppercase self-center" id="header_branch_label">
-                📍 {getActiveBranchLabel()}
-              </span>
+            <div className="flex flex-col text-left">
+              <h1 className="text-xl sm:text-2xl font-black text-[#111827] tracking-tight leading-tight">
+                {activeTab === 'dashboard' ? 'Dashboard' : getActiveBranchLabel()}
+              </h1>
+              <p className="text-[11px] text-[#4B5563] font-medium leading-none mt-0.5">
+                Overview of your laundry business
+              </p>
             </div>
           </div>
 

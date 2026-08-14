@@ -35,7 +35,8 @@ import {
   Search,
   Star,
   Send,
-  Bot
+  Bot,
+  Activity
 } from 'lucide-react';
 import { Role, User, Branch } from '../types';
 import { translations } from '../mockData';
@@ -105,65 +106,47 @@ export default function Sidebar({
   const t = translations[lang];
 
   // Navigation Items Definitions
-  const navItems = [
-    { id: 'dashboard', label: t.dashboard, icon: BarChart3, roles: ['Owner', 'Admin', 'Manager', 'Staff'] },
-    { id: 'reports', label: t.reports, icon: FileText, roles: ['Owner', 'Admin', 'Manager'] },
-    { id: 'auditlogs', label: lang === 'en' ? 'Operational Audit Logs' : 'កំណត់ហេតុសវនកម្ម', icon: History, roles: ['Owner', 'Admin'] },
+    const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3, roles: ['Owner', 'Admin', 'Manager', 'Staff'] },
+    { id: 'branches', label: 'Branches', icon: Layers, roles: ['Owner'] },
+    { id: 'reports', label: 'Reports', icon: FileText, roles: ['Owner', 'Admin', 'Manager'] },
+    { id: 'softeners', label: 'Daily Operations', icon: Activity, roles: ['Owner', 'Admin', 'Manager', 'Staff'] },
+    { id: 'expense', label: 'Financials', icon: DollarSign, roles: ['Owner', 'Admin', 'Manager'] },
     
-    { id: 'coins', label: lang === 'en' ? 'Coin Balance Ledger' : 'តុល្យភាពកាក់ក្នុងទូ', icon: Coins, roles: ['Owner', 'Admin', 'Manager', 'Staff'] },
+    { id: 'detergents', label: 'Soap & Softener', icon: Droplets, roles: ['Owner', 'Admin', 'Manager', 'Staff'] },
+    { id: 'inventory', label: 'Inventory', icon: Package, roles: ['Owner', 'Admin', 'Manager'] },
+    { id: 'suppliers', label: 'Suppliers', icon: Truck, roles: ['Owner', 'Admin', 'Manager'] },
+    { id: 'stock', label: 'Stock History', icon: History, roles: ['Owner', 'Admin', 'Manager', 'Staff'] },
     
-    { id: 'revenues', label: lang === 'en' ? 'Clean24 Revenue Sheet' : 'សន្លឹកកត់ត្រាចំណូល Clean24 (កុងទ័រ)', icon: DollarSign, roles: ['Owner', 'Admin', 'Manager', 'Staff'] },
-    { id: 'expense', label: t.expense, icon: CreditCard, roles: ['Owner', 'Admin', 'Manager'] },
-    { id: 'monthclosing', label: lang === 'en' ? 'Month Financial Closing' : 'ការបិទបញ្ជីហិរញ្ញវត្ថុប្រចាំខែ', icon: FileCheck, roles: ['Owner', 'Admin'] },
+    { id: 'staff', label: 'Staff Management', icon: Users, roles: ['Owner', 'Admin'] },
+    { id: 'attendance', label: 'Attendance', icon: Calendar, roles: ['Owner', 'Admin', 'Manager'] },
+    { id: 'salary', label: 'Payroll', icon: CreditCard, roles: ['Owner', 'Admin', 'Manager'] },
     
-    { id: 'staff', label: t.staff, icon: Users, roles: ['Owner', 'Admin'] },
-    { id: 'attendance', label: t.attendance, icon: Calendar, roles: ['Owner', 'Admin', 'Manager'] },
-    { id: 'salary', label: t.salary, icon: DollarSign, roles: ['Owner', 'Admin', 'Manager'] },
-    
-    { id: 'inventory', label: t.inventory, icon: Package, roles: ['Owner', 'Admin', 'Manager'] },
-    { id: 'stock', label: lang === 'en' ? 'Operations Supply Stock' : 'ទំនិញឃ្លាំង', icon: Boxes, roles: ['Owner', 'Admin', 'Manager', 'Staff'] },
-    { id: 'detergents', label: lang === 'en' ? 'Soap Level Reservoir' : 'ចំណុះសាប៊ូរាវ', icon: Droplets, roles: ['Owner', 'Admin', 'Manager', 'Staff'] },
-    { id: 'softeners', label: lang === 'en' ? 'Softener Level Reservoir' : 'ចំណុះទឹកក្រអូប', icon: Sparkle, roles: ['Owner', 'Admin', 'Manager', 'Staff'] },
-    { id: 'gas', label: lang === 'en' ? 'Gas Level Tracker' : 'ម៉ាស៊ីនហ្គាសសម្ងួត', icon: Flame, roles: ['Owner', 'Admin', 'Manager', 'Staff'] },
-    { id: 'suppliers', label: lang === 'en' ? 'Suppliers Registry' : 'បញ្ជីអ្នកផ្គត់ផ្គង់', icon: Truck, roles: ['Owner', 'Admin', 'Manager'] },
-    { id: 'debts', label: lang === 'en' ? 'Supplier Debts Ledger' : 'សៀវភៅបំណុលអ្នកផ្គត់ផ្គង់', icon: Wallet, roles: ['Owner', 'Admin', 'Manager'] },
-    
-    { id: 'branches', label: t.multiBranch, icon: Layers, roles: ['Owner'] },
-    { id: 'settings', label: t.settings, icon: Settings, roles: ['Owner', 'Admin'] },
-    { id: 'users', label: lang === 'en' ? 'User Accounts' : 'ការគ្រប់គ្រងគណនី', icon: UserCheck, roles: ['Owner', 'Admin'] },
-    { id: 'telegram_config', label: lang === 'en' ? 'Config Telegram' : 'កំណត់រចនាសម្ព័ន្ធ Telegram', icon: Bot, roles: ['Owner', 'Admin', 'Manager'] }
+    { id: 'users', label: 'Users & Roles', icon: UserCheck, roles: ['Owner', 'Admin'] },
+    { id: 'settings', label: 'Settings', icon: Settings, roles: ['Owner', 'Admin'] },
+    { id: 'auditlogs', label: 'Audit Logs', icon: FileCheck, roles: ['Owner', 'Admin'] }
   ];
 
-  const navGroups = [
+    const navGroups = [
     {
-      title: lang === 'en' ? 'Overview' : 'ទិដ្ឋភាពទូទៅ',
+      title: 'MAIN',
       icon: BarChart3,
-      items: ['dashboard', 'reports', 'auditlogs']
+      items: ['dashboard', 'branches', 'reports', 'softeners', 'expense']
     },
     {
-      title: lang === 'en' ? 'Daily Tasks' : 'ការងារប្រចាំថ្ងៃ',
-      icon: Calendar,
-      items: ['softeners', 'detergents', 'revenues']
+      title: 'INVENTORY & SUPPLIES',
+      icon: Package,
+      items: ['detergents', 'inventory', 'suppliers', 'stock']
     },
     {
-      title: lang === 'en' ? 'Financials' : 'ហិរញ្ញវត្ថុ',
-      icon: DollarSign,
-      items: ['expense', 'monthclosing']
-    },
-    {
-      title: lang === 'en' ? 'Staff & Payroll' : 'បុគ្គលិក និងប្រាក់ខែ',
+      title: 'STAFF & PAYROLL',
       icon: Users,
       items: ['staff', 'attendance', 'salary']
     },
     {
-      title: lang === 'en' ? 'Inventory & Supplies' : 'ស្តុក និងអ្នកផ្គត់ផ្គង់',
-      icon: Package,
-      items: ['coins', 'inventory', 'stock', 'gas', 'suppliers', 'debts']
-    },
-    {
-      title: lang === 'en' ? 'Administration' : 'ការគ្រប់គ្រងប្រព័ន្ធ',
+      title: 'SYSTEM',
       icon: Settings,
-      items: ['branches', 'settings', 'users', 'telegram_config']
+      items: ['users', 'settings', 'auditlogs']
     }
   ];
 
@@ -446,6 +429,19 @@ export default function Sidebar({
               {lang === 'en' ? 'No menus match search' : 'រកមិនឃើញមុខងារដែលស្វែងរកទេ'}
             </div>
           )}
+        </div>
+
+        {/* Sidebar Collapse Footer Bar */}
+        <div className="p-3 border-t border-blue-200/60 bg-[#E7EEFF] flex items-center justify-between text-xs font-bold text-[#4B5563] shrink-0">
+          <button 
+            type="button" 
+            onClick={() => setIsOpen(!isOpen)}
+            className="flex items-center gap-1.5 hover:text-[#111827] cursor-pointer transition-colors"
+          >
+            <ChevronRight size={14} className="rotate-180" />
+            <span>Collapse</span>
+          </button>
+          <span className="text-[10px] text-slate-400 font-mono">v2.0.0</span>
         </div>
 
       </aside>
