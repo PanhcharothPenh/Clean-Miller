@@ -248,18 +248,18 @@ export default function Sidebar({
   const favoritesExpanded = isGroupExpanded('clean24_favorites_group');
 
   return (
-    <aside className="w-full h-full bg-white/95 backdrop-blur-md text-slate-700 border-r border-slate-200/80 flex flex-col justify-between overflow-hidden shadow-xs">
+    <aside className="w-full h-full bg-slate-900 text-slate-100 border-r border-slate-800 flex flex-col justify-between overflow-hidden shadow-md">
         {/* Top Header Branding Component */}
-        <div className="p-4.5 border-b border-slate-200/70 bg-white/50">
-          <div className="flex items-center justify-between mb-3.5">
+        <div className="p-4 border-b border-slate-800 bg-slate-950/60">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex flex-col gap-0.5">
-              <Clean24Logo className="h-7.5 cursor-pointer" lightMode={true} />
-              <span className="text-[7.5px] text-slate-400 font-bold tracking-widest uppercase block pl-0.5">PHNOM PENH, KH</span>
+              <Clean24Logo className="h-7.5 cursor-pointer text-white" lightMode={false} />
+              <span className="text-[7.5px] text-teal-400 font-bold tracking-widest uppercase block pl-0.5">PHNOM PENH, KH</span>
             </div>
             {/* Lang switcher */}
             <button 
               onClick={() => setLang(lang === 'en' ? 'kh' : 'en')}
-              className="px-2.5 py-1 text-[10px] font-extrabold rounded-lg bg-slate-100/80 hover:bg-slate-200 text-slate-700 border border-slate-200/80 transition-all cursor-pointer shadow-2xs"
+              className="px-2.5 py-1 text-[10px] font-extrabold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all cursor-pointer shadow-xs"
               id="lang_switch_btn"
             >
               {lang === 'en' ? 'KH 🇰🇭' : 'EN 🇺🇸'}
@@ -267,14 +267,14 @@ export default function Sidebar({
           </div>
 
           {/* Active Branch Select Form */}
-          <div className="mt-3.5 bg-slate-50/90 p-2.5 rounded-xl border border-slate-200/70 shadow-2xs">
+          <div className="mt-3 bg-slate-800/90 p-2.5 rounded-xl border border-slate-700/80">
             <label className="text-[9px] text-slate-400 uppercase tracking-widest block mb-1 font-bold">
               {t.activeBranch}
             </label>
             <select
               value={activeBranchId}
               onChange={(e) => setActiveBranchId(e.target.value)}
-              className="w-full bg-white border border-slate-200 text-xs text-slate-700 rounded-lg p-1.5 focus:outline-none focus:border-blue-600 font-sans cursor-pointer transition-colors"
+              className="w-full bg-slate-900 border border-slate-700 text-xs text-slate-100 rounded-lg p-1.5 focus:outline-none focus:border-teal-500 font-sans cursor-pointer transition-colors"
               id="sidebar_branch_selector"
             >
               {currentRole === 'Owner' && (
@@ -290,7 +290,7 @@ export default function Sidebar({
         </div>
 
         {/* Search menu filter bar */}
-        <div className="px-4 py-2 bg-white border-b border-slate-100">
+        <div className="px-4 py-2.5 bg-slate-900 border-b border-slate-800">
           <div className="relative">
             <Search size={13} className="absolute left-2.5 top-2.5 text-slate-400" />
             <input
@@ -298,12 +298,12 @@ export default function Sidebar({
               placeholder={lang === 'en' ? "Search menus..." : "ស្វែងរកមុខងារ..."}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-blue-600 font-sans transition-all"
+              className="w-full bg-slate-800 border border-slate-700 text-xs text-slate-100 placeholder-slate-400 rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-teal-500 font-sans transition-all"
             />
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-2 text-[10px] text-slate-400 hover:text-slate-800 cursor-pointer"
+                className="absolute right-2.5 top-2 text-[10px] text-slate-400 hover:text-white cursor-pointer"
               >
                 Clear
               </button>
@@ -312,15 +312,15 @@ export default function Sidebar({
         </div>
 
         {/* Dynamic Navigation Tabs list */}
-        <div className="flex-1 overflow-y-auto px-3.5 pt-3 pb-12 space-y-4 custom-scrollbar bg-white">
+        <div className="flex-1 overflow-y-auto px-3 pt-3 pb-10 space-y-4 custom-scrollbar bg-slate-900">
           
           {/* Favorites Collapsible Group */}
           {favorites.length > 0 && (
-            <div className="space-y-1 border-b border-slate-100/50 pb-3">
+            <div className="space-y-1 border-b border-slate-800 pb-3">
               {/* Group Header */}
               <button
                 onClick={() => toggleGroup('clean24_favorites_group')}
-                className="w-full flex items-center justify-between px-2 py-1 text-xs font-black text-amber-500 uppercase tracking-widest hover:text-amber-600 transition-colors cursor-pointer"
+                className="w-full flex items-center justify-between px-2 py-1 text-xs font-black text-amber-400 uppercase tracking-widest hover:text-amber-300 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-1.5">
                   <Star size={11} className="fill-amber-400 text-amber-400 shrink-0" />
@@ -329,7 +329,7 @@ export default function Sidebar({
                     ({favoriteItems.length})
                   </span>
                 </div>
-                {favoritesExpanded ? <ChevronDown size={10} className="text-amber-500" /> : <ChevronRight size={10} className="text-amber-500" />}
+                {favoritesExpanded ? <ChevronDown size={10} className="text-amber-400" /> : <ChevronRight size={10} className="text-amber-400" />}
               </button>
 
               {/* Group Items */}
@@ -346,8 +346,8 @@ export default function Sidebar({
                         }}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 focus:outline-none cursor-pointer group/item
                           ${active 
-                            ? 'bg-blue-600 text-white font-bold shadow-xs' 
-                            : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                            ? 'bg-teal-600 text-white font-bold shadow-md' 
+                            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                           }
                         `}
                         id={`fav_tab_${item.id}`}
@@ -358,7 +358,7 @@ export default function Sidebar({
                         </div>
                         <span 
                           onClick={(e) => toggleFavorite(item.id, e)}
-                          className="p-1 rounded-md hover:bg-slate-200/50 cursor-pointer transition-colors shrink-0"
+                          className="p-1 rounded-md hover:bg-slate-700/50 cursor-pointer transition-colors shrink-0"
                         >
                           <Star 
                             size={16} 
@@ -385,7 +385,7 @@ export default function Sidebar({
                 {/* Group Header */}
                 <button
                   onClick={() => toggleGroup(group.title)}
-                  className="w-full flex items-center justify-between px-2 py-1 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-800 transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-between px-2 py-1 text-xs font-black text-slate-400 uppercase tracking-widest hover:text-slate-200 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-1.5">
                     <group.icon size={11} className="text-slate-400 shrink-0" />
@@ -411,8 +411,8 @@ export default function Sidebar({
                           }}
                           className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all duration-150 focus:outline-none cursor-pointer group/item
                             ${active 
-                              ? 'bg-blue-600 text-white font-bold shadow-xs' 
-                              : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                              ? 'bg-teal-600 text-white font-bold shadow-md' 
+                              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                             }
                           `}
                           id={`nav_tab_${item.id}`}
@@ -423,13 +423,13 @@ export default function Sidebar({
                           </div>
                           <span 
                             onClick={(e) => toggleFavorite(item.id, e)}
-                            className="p-1 rounded-md hover:bg-slate-200/50 cursor-pointer transition-colors shrink-0"
+                            className="p-1 rounded-md hover:bg-slate-700/50 cursor-pointer transition-colors shrink-0"
                           >
                             <Star 
                               size={16} 
                               className={favorites.includes(item.id) 
                                 ? 'fill-amber-400 text-amber-400' 
-                                : 'text-slate-350 opacity-0 group-hover/item:opacity-100 transition-opacity'
+                                : 'text-slate-500 opacity-0 group-hover/item:opacity-100 transition-opacity'
                               } 
                             />
                           </span>
