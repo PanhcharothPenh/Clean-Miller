@@ -8,6 +8,7 @@
     "py": "python main.py",
     "start:py": "python main.py",
     "start": "python main.py",
+    "build": "vite build",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
   },
