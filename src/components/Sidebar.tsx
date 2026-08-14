@@ -233,10 +233,10 @@ export default function Sidebar({
   return (
     <aside className="w-full h-full bg-[#E7EEFF] text-[#111827] border-r border-blue-200/70 flex flex-col justify-between overflow-hidden shadow-xs">
         {/* Top Header Branding Component */}
-        <div className="p-4 border-b border-blue-200/60 bg-[#E7EEFF] relative">
+        <div className="pt-2.5 pb-3 px-4 border-b border-blue-200/60 bg-[#E7EEFF] relative">
           
           {/* Lang switcher Top Right */}
-          <div className="flex justify-end mb-1">
+          <div className="flex justify-end mb-0.5">
             <button 
               onClick={() => setLang(lang === 'en' ? 'kh' : 'en')}
               className="px-2 py-0.5 text-[10px] font-extrabold rounded-lg bg-white hover:bg-slate-100 text-[#003D9B] border border-blue-200 transition-all cursor-pointer shadow-2xs"
@@ -246,9 +246,9 @@ export default function Sidebar({
             </button>
           </div>
 
-          {/* Centered Large Logo Component (No white box, no PHNOM PENH KH text) */}
-          <div className="flex flex-col items-center justify-center text-center py-1">
-            <Clean24Logo className="h-24 sm:h-28 cursor-pointer justify-center" lightMode={true} />
+          {/* Centered Well-Proportioned Logo Component (Higher up, compact size) */}
+          <div className="flex flex-col items-center justify-center text-center -mt-2 mb-1">
+            <Clean24Logo className="h-14 sm:h-16 cursor-pointer justify-center" lightMode={true} />
           </div>
 
           {/* Active Branch Select Form */}
