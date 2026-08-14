@@ -204,7 +204,7 @@ export default function TelegramLogin({ onLoginSuccess, lang, setLang }: Telegra
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#4361ee] hover:bg-[#3a56d4] disabled:bg-slate-300 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-[0.99]"
+              className="w-full bg-[#003D9B] hover:bg-[#2563EB] disabled:bg-slate-300 text-white font-bold py-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md cursor-pointer transition-all active:scale-[0.99]"
             >
               {loading ? <Loader2 size={14} className="animate-spin" /> : null}
               <span>{loading ? (lang === 'en' ? 'Authenticating...' : 'កំពុងទៀងផ្ទាត់...') : 'Login'}</span>

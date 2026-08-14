@@ -968,33 +968,33 @@ export default function App() {
           <div className="flex items-center gap-3">
             
             {/* Live Database Sync Indicator */}
-            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/50 rounded-xl px-2.5 py-1.5 text-[10px] font-bold shrink-0 select-none">
+            <div className="flex items-center gap-1.5 bg-[#D1FAE5] border border-[#065F46]/30 rounded-xl px-2.5 py-1.5 text-[10px] font-bold shrink-0 select-none">
               {dbSyncStatus === 'synced' ? (
                 <>
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#065F46] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#065F46]"></span>
                   </span>
-                  <span className="text-emerald-700 font-semibold tracking-wide uppercase text-[8px]">
+                  <span className="text-[#065F46] font-bold tracking-wide uppercase text-[8px]">
                     {lang === 'en' ? 'Cloud Synced' : 'ទិន្នន័យបានភ្ជាប់'}
                   </span>
                 </>
               ) : dbSyncStatus === 'connecting' ? (
                 <>
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
+                    <span className="animate-pulse absolute inline-flex h-full w-full rounded-full bg-[#92400E] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#92400E]"></span>
                   </span>
-                  <span className="text-amber-700 font-semibold tracking-wide uppercase text-[8px]">
+                  <span className="text-[#92400E] font-bold tracking-wide uppercase text-[8px]">
                     {lang === 'en' ? 'Checking Sync...' : 'កំពុងឆែក...'}
                   </span>
                 </>
               ) : (
                 <>
                   <span className="relative flex h-1.5 w-1.5">
-                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#991B1B]"></span>
                   </span>
-                  <span className="text-rose-700 font-semibold tracking-wide uppercase text-[8px]">
+                  <span className="text-[#991B1B] font-bold tracking-wide uppercase text-[8px]">
                     {lang === 'en' ? 'Offline Mode' : 'គ្មានការតភ្ជាប់'}
                   </span>
                 </>
