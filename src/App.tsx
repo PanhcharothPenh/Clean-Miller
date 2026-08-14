@@ -206,20 +206,6 @@ export default function App() {
     };
 
     checkSession();
-
-    const handleSessionExpired = () => {
-      if (active) {
-        setAuthenticatedUser(null);
-        handleAddNewAuditLog(`Session expired or revoked by security monitor`);
-      }
-    };
-
-    window.addEventListener('unauthorized-session-expired', handleSessionExpired);
-
-    return () => {
-      active = false;
-      window.removeEventListener('unauthorized-session-expired', handleSessionExpired);
-    };
   }, []);
 
   // Load database on initialization

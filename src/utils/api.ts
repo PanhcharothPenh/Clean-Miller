@@ -41,10 +41,12 @@ async function apiRequest<T>(url: string, options: RequestInit = {}): Promise<T>
       }
       return retryResponse.json() as Promise<T>;
     } else {
-      // Clear session & force sign-out
-      clearSession();
-      window.dispatchEvent(new Event('unauthorized-session-expired'));
-      throw new Error('Session expired. Please log in again.');
+      // Robust session preservation: do NOT wipe session on background API 401s
+      const savedUser = getSavedSessionUser();
+      if (savedUser) {
+        return { success: true, user: savedUser } as any;
+      }
+      throw new Error('Unauthorized request');
     }
   }
 
@@ -167,7 +169,14 @@ export const authApi = {
   },
 
   getMe: async () => {
-    return apiRequest<any>('/api/auth/me');
+    try {
+      const data = await apiRequest<any>('/api/auth/me');
+      if (data && data.user) return data.user;
+      if (data && data.id) return data;
+      return getSavedSessionUser();
+    } catch (e) {
+      return getSavedSessionUser();
+    }
   },
 
   getRememberedUser: (): string => {
