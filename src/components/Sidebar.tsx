@@ -233,20 +233,22 @@ export default function Sidebar({
   return (
     <aside className="w-full h-full bg-[#E7EEFF] text-[#111827] border-r border-blue-200/70 flex flex-col justify-between overflow-hidden shadow-xs">
         {/* Top Header Branding Component */}
-        <div className="p-4 border-b border-blue-200/60 bg-[#E7EEFF]">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex flex-col gap-0.5">
-              <Clean24Logo className="h-14 sm:h-16 cursor-pointer text-[#003D9B]" lightMode={true} />
-              <span className="text-[8px] text-[#0052CC] font-bold tracking-widest uppercase block pl-0.5 mt-1">PHNOM PENH, KH</span>
-            </div>
-            {/* Lang switcher */}
+        <div className="p-4 border-b border-blue-200/60 bg-[#E7EEFF] relative">
+          
+          {/* Lang switcher Top Right */}
+          <div className="flex justify-end mb-1">
             <button 
               onClick={() => setLang(lang === 'en' ? 'kh' : 'en')}
-              className="px-2.5 py-1 text-[10px] font-extrabold rounded-lg bg-white hover:bg-slate-100 text-[#003D9B] border border-blue-200 transition-all cursor-pointer shadow-2xs"
+              className="px-2 py-0.5 text-[10px] font-extrabold rounded-lg bg-white hover:bg-slate-100 text-[#003D9B] border border-blue-200 transition-all cursor-pointer shadow-2xs"
               id="lang_switch_btn"
             >
               {lang === 'en' ? 'KH 🇰🇭' : 'EN 🇺🇸'}
             </button>
+          </div>
+
+          {/* Centered Large Logo Component (No white box, no PHNOM PENH KH text) */}
+          <div className="flex flex-col items-center justify-center text-center py-1">
+            <Clean24Logo className="h-24 sm:h-28 cursor-pointer justify-center" lightMode={true} />
           </div>
 
           {/* Active Branch Select Form */}
