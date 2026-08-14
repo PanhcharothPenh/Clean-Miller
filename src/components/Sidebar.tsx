@@ -253,8 +253,8 @@ export default function Sidebar({
         <div className="p-4 border-b border-blue-200/60 bg-[#E7EEFF]">
           <div className="flex items-center justify-between mb-3">
             <div className="flex flex-col gap-0.5">
-              <Clean24Logo className="h-7.5 cursor-pointer text-[#003D9B]" lightMode={true} />
-              <span className="text-[7.5px] text-[#0052CC] font-bold tracking-widest uppercase block pl-0.5">PHNOM PENH, KH</span>
+              <Clean24Logo className="h-14 sm:h-16 cursor-pointer text-[#003D9B]" lightMode={true} />
+              <span className="text-[8px] text-[#0052CC] font-bold tracking-widest uppercase block pl-0.5 mt-1">PHNOM PENH, KH</span>
             </div>
             {/* Lang switcher */}
             <button 
